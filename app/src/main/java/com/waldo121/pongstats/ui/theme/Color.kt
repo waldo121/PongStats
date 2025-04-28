@@ -1,4 +1,4 @@
-package com.example.pongstats.ui.theme
+package com.waldo121.pongstats.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

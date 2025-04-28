@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">PongStats</string>
+    <string name="action_save">Enregistrer</string>
+    <string name="singles_match">Simple</string>
+    <string name="victories">victoires</string>
+    <string name="nb_victories">Nb. victoires</string>
+    <string name="nb_defeats">Nb. défaites</string>
+    <string name="opponent_name">Adversaire</string>
+    <string name="doubles_match">Double</string>
+    <string name="screen_stats">Statistiques</string>
 </resources>

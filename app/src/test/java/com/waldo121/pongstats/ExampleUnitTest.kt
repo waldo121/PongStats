@@ -1,4 +1,4 @@
-package com.example.pongstats
+package com.waldo121.pongstats
 
 import org.junit.Test
 
