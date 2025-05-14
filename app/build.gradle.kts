@@ -12,7 +12,7 @@ android {
     defaultConfig {
         applicationId = "com.waldo121.pongstats"
         minSdk = 28
-        targetSdk = 34
+        targetSdk = 28
         versionCode = 1
         versionName = "1.0"
 
