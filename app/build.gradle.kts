@@ -1,3 +1,14 @@
+import java.util.Properties
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(keystorePropertiesFile.inputStream())
+} else {
+    println("Warning: keystore.properties not found. Release build may fail.")
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -19,13 +30,24 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(keystoreProperties["RELEASE_STORE_FILE"] as String)
+            storePassword = keystoreProperties["RELEASE_STORE_PASSWORD"] as String
+            keyAlias = keystoreProperties["RELEASE_KEY_ALIAS"] as String
+            keyPassword = keystoreProperties["RELEASE_KEY_PASSWORD"] as String
+        }
+    }
+
     buildTypes {
-        release {
-            isMinifyEnabled = false
+        getByName("release") {
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
