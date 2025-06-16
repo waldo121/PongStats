@@ -1,5 +1,7 @@
 package com.waldo121.pongstats.viewModel
 
+import DoubleMatchRecordsUseCase
+import SingleMatchRecordsUseCase
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -10,13 +12,13 @@ import com.waldo121.pongstats.DOUBLE_MATCH
 import com.waldo121.pongstats.SINGLE_MATCH
 import com.waldo121.pongstats.data.model.DoubleMatchRecord
 import com.waldo121.pongstats.data.model.SingleMatchRecord
-import com.waldo121.pongstats.data.repository.MatchRecordRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.sql.SQLException
 import java.util.Date
 
 data class MatchRecordUiState(
@@ -28,23 +30,26 @@ data class MatchRecordUiState(
 )
 
 class MatchRecordViewModel(
-    private val matchRecordRepository: MatchRecordRepository,
+    private val singleMatchRecordsUseCase: SingleMatchRecordsUseCase,
+    private val doubleMatchRecordsUseCase: DoubleMatchRecordsUseCase
 ): ViewModel() {
 
     private val _uiState = MutableStateFlow(MatchRecordUiState())
     val uiState: StateFlow<MatchRecordUiState> = _uiState.asStateFlow()
 
     companion object {
-        val MATCH_RECORD_REPOSITORY_KEY = object: CreationExtras.Key<MatchRecordRepository> {}
+        val SINGLE_MATCH_USE_CASE_KEY = object : CreationExtras.Key<SingleMatchRecordsUseCase> {}
+        val DOUBLE_MATCH_USE_CASE_KEY = object : CreationExtras.Key<DoubleMatchRecordsUseCase> {}
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val repo =  this[MATCH_RECORD_REPOSITORY_KEY] as MatchRecordRepository
-                MatchRecordViewModel(
-                    matchRecordRepository = repo
-                )
+                val singleUseCase = this[SINGLE_MATCH_USE_CASE_KEY] as SingleMatchRecordsUseCase
+                val doubleUseCase = this[DOUBLE_MATCH_USE_CASE_KEY] as DoubleMatchRecordsUseCase
+                MatchRecordViewModel(singleUseCase, doubleUseCase)
             }
         }
     }
+
 
     fun updateMatchType(matchType: String) {
         _uiState.update { currentState ->
@@ -83,32 +88,36 @@ class MatchRecordViewModel(
                 opponent2Name = opponentName
             )
         }
-
     }
-    fun createMatchRecord() {
-        if (_uiState.value.matchType == SINGLE_MATCH) {
-            val singleMatchRecord = SingleMatchRecord(
-                numberOfWins = _uiState.value.numberOfWins,
-                numberOfDefeats = _uiState.value.numberOfDefeats,
-                opponentName = _uiState.value.opponentName,
-                date = Date()
-            )
-            viewModelScope.launch(Dispatchers.IO) {
-                matchRecordRepository.createSingleMatchRecord(singleMatchRecord)
+    fun createMatchRecord(): Boolean {
+        try {
+            if (_uiState.value.matchType == SINGLE_MATCH) {
+                val singleMatchRecord = SingleMatchRecord(
+                    numberOfWins = _uiState.value.numberOfWins,
+                    numberOfDefeats = _uiState.value.numberOfDefeats,
+                    opponentName = _uiState.value.opponentName,
+                    date = Date()
+                )
+                viewModelScope.launch(Dispatchers.IO) {
+                    singleMatchRecordsUseCase.invoke(singleMatchRecord)
+                }
+            } else if (_uiState.value.matchType == DOUBLE_MATCH) {
+                val doubleMatchRecord = DoubleMatchRecord(
+                    numberOfWins = _uiState.value.numberOfWins,
+                    numberOfDefeats = _uiState.value.numberOfDefeats,
+                    opponent1Name = _uiState.value.opponentName,
+                    opponent2Name = _uiState.value.opponent2Name,
+                    date = Date()
+                )
+                viewModelScope.launch(Dispatchers.IO) {
+                    doubleMatchRecordsUseCase.invoke(doubleMatchRecord)
+                }
             }
-        } else if (_uiState.value.matchType == DOUBLE_MATCH) {
-            val doubleMatchRecord = DoubleMatchRecord(
-                numberOfWins = _uiState.value.numberOfWins,
-                numberOfDefeats = _uiState.value.numberOfDefeats,
-                opponent1Name = _uiState.value.opponentName,
-                opponent2Name = _uiState.value.opponent2Name,
-                date = Date()
-            )
-            viewModelScope.launch(Dispatchers.IO) {
-                matchRecordRepository.createDoubleMatchRecord(doubleMatchRecord)
-            }
+            reset()
+            return true
+        } catch (e: SQLException) {
+            return false
         }
-        reset()
     }
     fun isNameValid(name: String): Boolean {
         return name.isNotBlank() && name.isNotEmpty() && name.all{ it.isLetter() }
@@ -143,6 +152,4 @@ class MatchRecordViewModel(
             )
         }
     }
-
-
 }

@@ -8,7 +8,7 @@
     <string name="opponent_name">Adversaire</string>
     <string name="doubles_match">Double</string>
     <string name="screen_stats">Statistiques</string>
-    <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_main">PongStats</string>
     <string name="match_type">Type de partie</string>
     <string name="opponent_2_name">Adversaire 2</string>
     <string name="hint_name">Le nom peut seulement être composé de lettres</string>
@@ -16,4 +16,18 @@
     <string name="session">Session</string>
     <string name="statististics">Statistiques</string>
     <string name="options">Options</string>
+    <string name="main_icon_description">Icône principal de PongStats</string>
+    <string name="save_success">L\'enregistrement de la session est un succès</string>
+    <string name="save_error">L\'enregistrement de la session a échoué</string>
+    <string name="match_saved">Session sauvegardée</string>
+    <string name="error_saving_match">L\'enregistrement de la session a échoué</string>
+    <string name="no_singles_data">Aucune données disponibles pour les parties 1v1</string>
+    <string name="no_doubles_data">Aucune données disponibles pour les parties 2v2</string>
+    <string name="singles_daily_win_rate">Taux de victoire quotidien en Simple</string>
+    <string name="doubles_daily_win_rate">Taux de victoire quotidien en Double</string>
+    <string name="legend_win_rate_percent">Taux de victoire en %</string>
+    <string name="current_win_rate">Taux de victoire</string>
+    <string name="win_rate">Taux de victoire</string>
+    <string name="daily_win_rate">Taux de victoire quotidien</string>
+    <string name="no_data">Aucune donnée disponible</string>
 </resources>

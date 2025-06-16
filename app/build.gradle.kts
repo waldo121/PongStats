@@ -23,11 +23,15 @@ android {
     defaultConfig {
         applicationId = "com.waldo121.pongstats"
         minSdk = 28
+        //noinspection ExpiredTargetSdkVersion
         targetSdk = 28
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
 
     signingConfigs {
@@ -40,14 +44,12 @@ android {
     }
 
     buildTypes {
-        getByName("release") {
-            isMinifyEnabled = true
-            isShrinkResources = true
+        release {
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -74,6 +76,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.runtime)
+    implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m3)
     annotationProcessor(libs.androidx.room.compiler)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)

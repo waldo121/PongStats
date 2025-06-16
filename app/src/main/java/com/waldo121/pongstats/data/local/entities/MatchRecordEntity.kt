@@ -5,8 +5,9 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import com.waldo121.pongstats.data.model.DoubleMatchRecord
+import com.waldo121.pongstats.data.model.SingleMatchRecord
 import java.util.Date
-import java.time.LocalDate
 
 
 @Entity(tableName = "single_match_records")
@@ -44,3 +45,17 @@ class DateConverter {
         return Date(value)
     }
 }
+
+fun SingleMatchRecordEntity.toDomain(): SingleMatchRecord = SingleMatchRecord(
+    opponentName = opponentName,
+    date = date,
+    numberOfDefeats = numberOfDefeats,
+    numberOfWins = numberOfWins
+)
+fun DoubleMatchRecordEntity.toDomain(): DoubleMatchRecord = DoubleMatchRecord(
+    opponent1Name = opponent1Name,
+    opponent2Name = opponent2Name,
+    date = date,
+    numberOfDefeats = numberOfDefeats,
+    numberOfWins = numberOfWins
+)
