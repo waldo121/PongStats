@@ -12,7 +12,7 @@
     <string name="match_type">Type de partie</string>
     <string name="opponent_2_name">Adversaire 2</string>
     <string name="hint_name">Le nom peut seulement être composé de lettres</string>
-    <string name="hint_nb_victories">Doit être un nombre entier supérieur ou égal à 0</string>
+    <string name="hint_nb_victories">Doit être un nombre entier supérieur à 0 ou vide</string>
     <string name="session">Session</string>
     <string name="statististics">Statistiques</string>
     <string name="options">Options</string>
