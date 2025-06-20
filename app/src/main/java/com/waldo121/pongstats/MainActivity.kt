@@ -70,10 +70,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
@@ -94,8 +96,11 @@ import com.waldo121.pongstats.viewModel.StatisticsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.round
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import java.time.Instant
 
 class MainActivity : ComponentActivity() {
     private lateinit var appDatabase: MatchRecordsDatabase
@@ -220,22 +225,33 @@ fun HomeScreen(
     val combinedModelProducer = remember(keySingle, keyDouble) { CartesianChartModelProducer() }
     val coroutineScope = rememberCoroutineScope()
 
-    val singleSeriesData = remember(singleData) {
-        singleData.map { it.winRate.toDouble() }
-    }
-    val doubleSeriesData = remember(doubleData) {
-        doubleData.map { it.winRate.toDouble() }
-    }
+    val singleSeriesX = singleData.map { Instant.ofEpochMilli(it.date.time).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay().toFloat() }
+    val singleSeriesY = singleData.map { it.winRate.toFloat() }
+
+    val doubleSeriesX = doubleData.map { Instant.ofEpochMilli(it.date.time).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay().toFloat() }
+    val doubleSeriesY = doubleData.map { it.winRate.toFloat() }
+
+    // Collect all unique x-values in order
+    val allXValues = (singleSeriesX + doubleSeriesX).distinct().sorted()
+
+    // Dynamically calculate labelEvery so that at most maxLabels are shown
+    val maxLabels = 7
+    val labelEvery = if (allXValues.size <= maxLabels) 1 else (allXValues.size + maxLabels - 1) / maxLabels
+
+    // Determine which series are present and in what order
+    val presentSeries = mutableListOf<String>()
+    if (singleSeriesY.isNotEmpty()) presentSeries.add("singles")
+    if (doubleSeriesY.isNotEmpty()) presentSeries.add("doubles")
 
     LaunchedEffect(keySingle, keyDouble) {
         coroutineScope.launch(Dispatchers.Default) {
             combinedModelProducer.runTransaction {
                 lineSeries {
-                    if (singleSeriesData.isNotEmpty()) {
-                        series(*singleSeriesData.toTypedArray())
+                    if (singleSeriesX.isNotEmpty() && singleSeriesY.isNotEmpty()) {
+                        series(x = singleSeriesX, y = singleSeriesY)
                     }
-                    if (doubleSeriesData.isNotEmpty()) {
-                        series(*doubleSeriesData.toTypedArray())
+                    if (doubleSeriesX.isNotEmpty() && doubleSeriesY.isNotEmpty()) {
+                        series(x = doubleSeriesX, y = doubleSeriesY)
                     }
                 }
             }
@@ -316,7 +332,10 @@ fun HomeScreen(
                 modelProducer = combinedModelProducer,
                 modifier = Modifier.padding(vertical = 8.dp),
                 title = stringResource(R.string.daily_win_rate),
-                showLegend = true
+                showLegend = true,
+                presentSeries = presentSeries,
+                allXValues = allXValues,
+                labelEvery = labelEvery
             )
         } else {
             EmptyChartPlaceholder(
@@ -355,8 +374,29 @@ private fun WinRateChart(
     modelProducer: CartesianChartModelProducer,
     modifier: Modifier = Modifier,
     title: String,
-    showLegend: Boolean = false
+    showLegend: Boolean = false,
+    presentSeries: List<String>,
+    allXValues: List<Float>,
+    labelEvery: Int = 5
 ) {
+    val singlesColor = PingPongRed
+    val doublesColor = PingPongDarkRed
+
+    val lines = presentSeries.map { series ->
+        when (series) {
+            "singles" -> LineCartesianLayer.Line(
+                fill = LineCartesianLayer.LineFill.single(fill(singlesColor)),
+                stroke = LineCartesianLayer.LineStroke.Continuous(2f)
+            )
+            "doubles" -> LineCartesianLayer.Line(
+                fill = LineCartesianLayer.LineFill.single(fill(doublesColor)),
+                stroke = LineCartesianLayer.LineStroke.Continuous(2f)
+            )
+            else -> error("Unknown series type")
+        }
+    }
+    val lineProvider = LineCartesianLayer.LineProvider.series(*lines.toTypedArray())
+
     Column(
         modifier = modifier
             .background(
@@ -375,18 +415,26 @@ private fun WinRateChart(
         )
         CartesianChartHost(
             chart = rememberCartesianChart(
-                rememberLineCartesianLayer(),
+                rememberLineCartesianLayer(
+                    lineProvider = lineProvider
+                ),
                 startAxis = VerticalAxis.rememberStart(
                     valueFormatter = { _, value, _ ->
                         "${round(value).toInt()}%"
                     }
                 ),
                 bottomAxis = HorizontalAxis.rememberBottom(
-                    itemPlacer = HorizontalAxis.ItemPlacer.segmented(),
+                    itemPlacer = HorizontalAxis.ItemPlacer.aligned(),
                     valueFormatter = { _, value, _ ->
-                        val date = LocalDate.ofEpochDay(value.toLong())
-                        date.format(DateTimeFormatter.ofPattern("MM/YYYY"))
-                    }
+                        val index = allXValues.indexOf(value.toFloat())
+                        if (index >= 0 && index % labelEvery == 0) {
+                            val date = LocalDate.ofEpochDay(value.toLong())
+                            date.format(DateTimeFormatter.ofPattern("MMM, YYYY"))
+                        } else {
+                            ""
+                        }
+                    },
+                    labelRotationDegrees = 30f
                 ),
             ),
             modelProducer = modelProducer,

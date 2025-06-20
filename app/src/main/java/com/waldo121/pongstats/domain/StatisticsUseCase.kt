@@ -8,12 +8,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
+import java.util.Date
 import java.time.ZoneId
 
 
 data class ChartDataPoint (
-    val date: LocalDate,
+    val date: Date,
     val winRate: Int
 )
 
@@ -33,40 +33,28 @@ class DailyWinRateUseCase(
              if (matchType == SINGLE_MATCH) {
                  return@withContext matchRecordRepository.getAllSingleMatchRecords()
                      .map { matchRecords: List<SingleMatchRecord> ->
-                         // by day
-                         matchRecords.groupBy { matchRecord: SingleMatchRecord ->
-                             matchRecord.date.toInstant()
-                                 .atZone(zoneId)
-                                 .toLocalDate()
-                         }.map { (date, matchesAtDate) ->
-                             val wins = matchesAtDate.sumOf { it.numberOfWins }
-                             val defeats = matchesAtDate.sumOf { it.numberOfDefeats }
-                             val total = wins + defeats
-                             val winRate = if (total > 0) Integer.valueOf(wins * 100 / total) else 0
-                             ChartDataPoint(
-                                 date,
-                                 winRate
-                             )
-                         }.sortedBy { it.date }
+                         // by date
+                         matchRecords.groupBy { it.date }
+                             .map { (date, matchesAtDate) ->
+                                 val wins = matchesAtDate.sumOf { it.numberOfWins }
+                                 val defeats = matchesAtDate.sumOf { it.numberOfDefeats }
+                                 val total = wins + defeats
+                                 val winRate = if (total > 0) (wins * 100 / total) else 0
+                                 ChartDataPoint(date, winRate)
+                             }.sortedBy { it.date }
                      }
              } else {
                  return@withContext matchRecordRepository.getAllDoubleMatchRecords()
                      .map { matchRecords: List<DoubleMatchRecord> ->
-                         // by day
-                         matchRecords.groupBy { matchRecord: DoubleMatchRecord ->
-                             matchRecord.date.toInstant()
-                                 .atZone(zoneId)
-                                 .toLocalDate()
-                         }.map { (date, matchesAtDate) ->
-                             val wins = matchesAtDate.sumOf { it.numberOfWins }
-                             val defeats = matchesAtDate.sumOf { it.numberOfDefeats }
-                             val total = wins + defeats
-                             val winRate = if (total > 0) Integer.valueOf(wins * 100 / total) else 0
-                             ChartDataPoint(
-                                 date,
-                                 winRate
-                             )
-                         }.sortedBy { it.date }
+                         // by date
+                         matchRecords.groupBy { it.date }
+                             .map { (date, matchesAtDate) ->
+                                 val wins = matchesAtDate.sumOf { it.numberOfWins }
+                                 val defeats = matchesAtDate.sumOf { it.numberOfDefeats }
+                                 val total = wins + defeats
+                                 val winRate = if (total > 0) (wins * 100 / total) else 0
+                                 ChartDataPoint(date, winRate)
+                             }.sortedBy { it.date }
                      }
              }
          }
