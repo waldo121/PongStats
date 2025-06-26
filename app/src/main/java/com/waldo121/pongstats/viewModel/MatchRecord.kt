@@ -120,7 +120,7 @@ class MatchRecordViewModel(
         }
     }
     fun isNameValid(name: String): Boolean {
-        return name.isNotBlank() && name.isNotEmpty() && name.all{ it.isLetter() }
+        return name.isNotBlank() && name.isNotEmpty() && name.all { it.isLetter() || it == '-' }
     }
     fun isResultValid(number: Int): Boolean {
         return number >= 0

@@ -63,8 +63,6 @@ The app follows semantic versioning:
 - Minor version: Backwards-compatible functionality
 - Patch version: Backwards-compatible bug fixes
 
-Current version: 1.0.0
-
 ## Contributing
 
 1. Fork the repository
