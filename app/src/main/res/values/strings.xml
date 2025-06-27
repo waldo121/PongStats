@@ -30,4 +30,9 @@
     <string name="win_rate">Taux de victoire</string>
     <string name="daily_win_rate">Taux de victoire quotidien</string>
     <string name="no_data">Aucune donnée disponible</string>
+    <string name="player_list_title">Joueurs</string>
+    <string name="player_profile_title">Profil du joueur</string>
+    <string name="player_stats">Statistiques contre ce joueur</string>
+    <string name="back_to_player_list">Retour à la liste</string>
+    <string name="no_matches_against_player">Aucun match contre ce joueur</string>
 </resources>

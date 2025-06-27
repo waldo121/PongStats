@@ -13,6 +13,8 @@ interface SingleMatchRecordDao {
     fun getAll(): Flow<List<SingleMatchRecordEntity>>
     @Insert
     fun createRecord(vararg matchRecordEntity: SingleMatchRecordEntity)
+    @Query("SELECT DISTINCT opponentName FROM single_match_records")
+    fun getAllUniqueOpponentNames(): Flow<List<String>>
 }
 @Dao
 interface DoubleMatchRecordDao {
@@ -20,4 +22,6 @@ interface DoubleMatchRecordDao {
     fun getAll(): Flow<List<DoubleMatchRecordEntity>>
     @Insert
     fun createRecord(vararg matchRecordEntity: DoubleMatchRecordEntity)
+    @Query("SELECT DISTINCT opponent1Name FROM double_match_records UNION SELECT DISTINCT opponent2Name FROM double_match_records")
+    fun getAllUniqueOpponentNames(): Flow<List<String>>
 }

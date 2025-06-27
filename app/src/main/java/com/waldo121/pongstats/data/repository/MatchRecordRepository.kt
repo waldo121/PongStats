@@ -10,6 +10,7 @@ import com.waldo121.pongstats.data.model.SingleMatchRecord
 import com.waldo121.pongstats.data.model.toEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.sql.SQLException
@@ -52,6 +53,14 @@ class MatchRecordRepository (
             return@withContext dao.getAll()
                 .map { entities: List<DoubleMatchRecordEntity> -> entities.map { it.toDomain() } }
 
+        }
+    }
+
+    fun getAllUniquePlayerNames(): Flow<List<String>> {
+        val singleNames = matchRecordLocalDatabase.singleMatchRecordDao().getAllUniqueOpponentNames()
+        val doubleNames = matchRecordLocalDatabase.doubleMatchRecordDao().getAllUniqueOpponentNames()
+        return combine(singleNames, doubleNames) { singles, doubles ->
+            (singles + doubles).toSet().toList().sorted()
         }
     }
 }

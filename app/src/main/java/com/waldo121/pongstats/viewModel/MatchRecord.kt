@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.sql.SQLException
 import java.util.Date
+import com.waldo121.pongstats.data.repository.MatchRecordRepository
+import kotlinx.coroutines.flow.collect
 
 data class MatchRecordUiState(
     val matchType: String = SINGLE_MATCH,
@@ -37,6 +39,12 @@ class MatchRecordViewModel(
     private val _uiState = MutableStateFlow(MatchRecordUiState())
     val uiState: StateFlow<MatchRecordUiState> = _uiState.asStateFlow()
 
+    private val _allPlayerNames = MutableStateFlow<List<String>>(emptyList())
+    val allPlayerNames: StateFlow<List<String>> = _allPlayerNames.asStateFlow()
+
+    private val _allSingleMatchRecords = MutableStateFlow<List<SingleMatchRecord>>(emptyList())
+    val allSingleMatchRecords: StateFlow<List<SingleMatchRecord>> = _allSingleMatchRecords.asStateFlow()
+
     companion object {
         val SINGLE_MATCH_USE_CASE_KEY = object : CreationExtras.Key<SingleMatchRecordsUseCase> {}
         val DOUBLE_MATCH_USE_CASE_KEY = object : CreationExtras.Key<DoubleMatchRecordsUseCase> {}
@@ -50,6 +58,20 @@ class MatchRecordViewModel(
         }
     }
 
+    init {
+        viewModelScope.launch {
+            val repository = singleMatchRecordsUseCase.repository
+            repository.getAllUniquePlayerNames().collect { names ->
+                _allPlayerNames.value = names
+            }
+        }
+        viewModelScope.launch {
+            val repository = singleMatchRecordsUseCase.repository
+            repository.getAllSingleMatchRecords().collect { records ->
+                _allSingleMatchRecords.value = records
+            }
+        }
+    }
 
     fun updateMatchType(matchType: String) {
         _uiState.update { currentState ->
@@ -83,10 +105,12 @@ class MatchRecordViewModel(
 
     }
     fun updateOpponent2Name(opponentName: String) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                opponent2Name = opponentName
-            )
+        if (opponentName != _uiState.value.opponentName) {
+            _uiState.update { currentState ->
+                currentState.copy(
+                    opponent2Name = opponentName
+                )
+            }
         }
     }
     fun createMatchRecord(): Boolean {

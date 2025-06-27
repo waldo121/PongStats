@@ -26,7 +26,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -101,6 +103,25 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.round
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import java.time.Instant
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.waldo121.pongstats.ui.screens.PlayerListScreen
+import com.waldo121.pongstats.ui.screens.PlayerProfileScreen
+import com.waldo121.pongstats.viewModel.PlayerListViewModel
+import com.waldo121.pongstats.viewModel.PlayerListViewModelFactory
+import com.waldo121.pongstats.viewModel.PlayerProfileViewModel
+import com.waldo121.pongstats.viewModel.PlayerProfileViewModelFactory
+import java.net.URLDecoder
+import java.net.URLEncoder
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.unit.DpOffset
 
 class MainActivity : ComponentActivity() {
     private lateinit var appDatabase: MatchRecordsDatabase
@@ -138,6 +159,7 @@ fun App(
     var selectedTab by remember { mutableIntStateOf(0) }
 
     PongStatsTheme {
+        val navController = rememberNavController()
         Scaffold(
             modifier = modifier,
             bottomBar = {
@@ -148,7 +170,13 @@ fun App(
                         icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.statististics)) },
                         label = { Text(stringResource(R.string.statististics)) },
                         selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
+                        onClick = {
+                            selectedTab = 0
+                            navController.navigate("main_tabs") {
+                                popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = PingPongRed,
                             selectedTextColor = PingPongRed,
@@ -159,7 +187,30 @@ fun App(
                         icon = { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.session)) },
                         label = { Text(stringResource(R.string.session)) },
                         selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
+                        onClick = {
+                            selectedTab = 1
+                            navController.navigate("main_tabs") {
+                                popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = PingPongRed,
+                            selectedTextColor = PingPongRed,
+                            indicatorColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Person, contentDescription = stringResource(R.string.player_list_title)) },
+                        label = { Text(stringResource(R.string.player_list_title)) },
+                        selected = selectedTab == 2,
+                        onClick = {
+                            selectedTab = 2
+                            navController.navigate("main_tabs") {
+                                popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = PingPongRed,
                             selectedTextColor = PingPongRed,
@@ -171,17 +222,68 @@ fun App(
             topBar = { AppTopBar(Modifier) },
             containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
-            when (selectedTab) {
-                0 -> {
-                    HomeScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        viewModel = statisticsViewModel,
-                    )
+            NavHost(
+                navController = navController,
+                startDestination = "main_tabs"
+            ) {
+                composable("main_tabs") {
+                    when (selectedTab) {
+                        0 -> {
+                            HomeScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                viewModel = statisticsViewModel,
+                            )
+                        }
+                        1 -> {
+                            SessionScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                viewModel = matchRecordViewModel,
+                            )
+                        }
+                        2 -> {
+                            val playerListViewModel: PlayerListViewModel = viewModel(
+                                factory = PlayerListViewModelFactory(matchRecordRepository)
+                            )
+                            val playerNames = playerListViewModel.playerNames.collectAsStateWithLifecycle().value
+                            PlayerListScreen(
+                                playerNames = playerNames,
+                                onPlayerSelected = { playerName ->
+                                    navController.navigate("player_profile/" + URLEncoder.encode(playerName, "UTF-8"))
+                                }
+                            )
+                        }
+                    }
                 }
-                1 -> {
-                    SessionScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        viewModel = matchRecordViewModel,
+                composable(
+                    "player_profile/{playerName}",
+                    arguments = listOf(navArgument("playerName") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val playerName = backStackEntry.arguments?.getString("playerName")?.let {
+                        URLDecoder.decode(it, "UTF-8")
+                    } ?: ""
+                    val playerProfileViewModel: PlayerProfileViewModel = viewModel(
+                        factory = PlayerProfileViewModelFactory(matchRecordRepository, playerName)
+                    )
+                    val stats = playerProfileViewModel.stats.collectAsStateWithLifecycle().value
+                    // Use the new allSingleMatchRecords StateFlow for contextualized chart
+                    val allSingleMatchRecords by matchRecordViewModel.allSingleMatchRecords.collectAsStateWithLifecycle()
+                    val playerSingles = allSingleMatchRecords.filter { it.opponentName == playerName }
+                    val playerChartData = playerSingles
+                        .groupBy { it.date }
+                        .map { (date, matchesAtDate) ->
+                            val wins = matchesAtDate.sumOf { it.numberOfWins }
+                            val defeats = matchesAtDate.sumOf { it.numberOfDefeats }
+                            val total = wins + defeats
+                            val winRate = if (total > 0) (wins * 100 / total) else 0
+                            com.waldo121.pongstats.domain.ChartDataPoint(date, winRate)
+                        }
+                        .sortedBy { it.date }
+                    PlayerProfileScreen(
+                        playerName = playerName,
+                        stats = stats,
+                        onBack = { navController.popBackStack() },
+                        chartData = playerChartData,
+                        modifier = Modifier.padding(innerPadding)
                     )
                 }
             }
@@ -275,11 +377,11 @@ fun HomeScreen(
         )
 
         // Win rates side by side
-        androidx.compose.foundation.layout.Row(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             // Singles Current Win Rate
             Column(
@@ -528,13 +630,116 @@ private fun EmptyChartPlaceholder(
 }
 
 @Composable
+fun MatchTypeDropdown(
+    matchType: String,
+    onMatchTypeSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val options = listOf(
+        stringResource(R.string.singles_match),
+        stringResource(R.string.doubles_match)
+    )
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier) {
+        OutlinedTextField(
+            value = matchType,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.match_type)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            trailingIcon = {
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    Modifier.clickable { expanded = !expanded }
+                )
+            }
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(),
+            offset = DpOffset(0.dp, 0.dp)
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onMatchTypeSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+        // Make the whole text field clickable to open the dropdown
+        androidx.compose.foundation.layout.Box(
+            Modifier
+                .matchParentSize()
+                .clickable { expanded = true }
+        )
+    }
+}
+
+@Composable
+fun FilterableDropdown(
+    options: List<String>,
+    selected: String,
+    onSelected: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var text by remember { mutableStateOf(selected) }
+
+    Box(modifier) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = {
+                text = it
+                expanded = true
+            },
+            label = { Text(label) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            trailingIcon = {
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    Modifier.clickable { expanded = !expanded }
+                )
+            }
+        )
+        val filteredOptions = options.filter { it.contains(text, ignoreCase = true) }
+        DropdownMenu(
+            expanded = expanded && filteredOptions.isNotEmpty(),
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(),
+            offset = DpOffset(0.dp, 0.dp)
+        ) {
+            filteredOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        text = option
+                        onSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun SessionScreen(
     modifier: Modifier = Modifier,
     viewModel: MatchRecordViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var matchTypeSelectorExpanded by remember { mutableStateOf(false) }
-    val options: List<String> = listOf(stringResource(R.string.singles_match), stringResource(R.string.doubles_match))
+    val allPlayerNames by viewModel.allPlayerNames.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -544,88 +749,31 @@ fun SessionScreen(
             .padding(horizontal = 16.dp)
     ) {
         Spacer(modifier = Modifier.height(8.dp))
-        Text(matchTypeToLocalized(uiState.matchType))
-        ExposedDropdownMenuBox(
-            expanded = matchTypeSelectorExpanded,
-            onExpandedChange = { matchTypeSelectorExpanded = it },
-        ) {
-            TextField(
-                value = matchTypeToLocalized(uiState.matchType),
-                onValueChange = {},
-                enabled = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(), //TODO: deprecated
-                readOnly = true,
-                textStyle = MaterialTheme.typography.bodyLarge,
-                minLines = 1,
-                maxLines = 1,
-                label = { Text(stringResource(R.string.match_type)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = matchTypeSelectorExpanded) },
-                colors = ExposedDropdownMenuDefaults.textFieldColors(
-                    focusedContainerColor = PingPongLightWood,
-                    unfocusedContainerColor = PingPongLightWood,
-                    focusedLabelColor = PingPongRed,
-                    unfocusedLabelColor = PingPongDarkGrey
-                ),
-                singleLine = true,
-            )
-            ExposedDropdownMenu(
-                expanded = matchTypeSelectorExpanded,
-                onDismissRequest = { matchTypeSelectorExpanded = false },
-            ) {
-                val context = LocalContext.current
-                options.forEach { option ->
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text(option, style = MaterialTheme.typography.bodyLarge) },
-                        onClick = {
-                            viewModel.updateMatchType(matchTypeFromLocalized(option, context))
-                            matchTypeSelectorExpanded = false
-                        },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = uiState.opponentName,
-            onValueChange = { viewModel.updateOpponentName(it) },
-            label = { Text(stringResource(R.string.opponent_name)) },
-            modifier = Modifier.fillMaxWidth(),
-            isError = !viewModel.isNameValid(uiState.opponentName),
-            supportingText = { Text(stringResource(R.string.hint_name)) },
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PingPongRed,
-                unfocusedBorderColor = PingPongDarkGrey,
-                focusedLabelColor = PingPongRed,
-                unfocusedLabelColor = PingPongDarkGrey
-            )
+        MatchTypeDropdown(
+            matchType = matchTypeToLocalized(uiState.matchType),
+            onMatchTypeSelected = { selected ->
+                viewModel.updateMatchType(matchTypeFromLocalized(selected, context))
+            },
+            modifier = Modifier.fillMaxWidth()
         )
-
+        Spacer(modifier = Modifier.height(8.dp))
+        FilterableDropdown(
+            options = allPlayerNames,
+            selected = uiState.opponentName,
+            onSelected = { viewModel.updateOpponentName(it) },
+            label = stringResource(R.string.opponent_name),
+            modifier = Modifier.fillMaxWidth()
+        )
         if (uiState.matchType == DOUBLE_MATCH) {
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = uiState.opponent2Name,
-                onValueChange = { viewModel.updateOpponent2Name(it) },
-                label = { Text(stringResource(R.string.opponent_2_name)) },
-                modifier = Modifier.fillMaxWidth(),
-                isError = !viewModel.isNameValid(uiState.opponent2Name),
-                supportingText = { Text(stringResource(R.string.hint_name)) },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PingPongRed,
-                    unfocusedBorderColor = PingPongDarkGrey,
-                    focusedLabelColor = PingPongRed,
-                    unfocusedLabelColor = PingPongDarkGrey
-                )
+            FilterableDropdown(
+                options = allPlayerNames,
+                selected = uiState.opponent2Name,
+                onSelected = { viewModel.updateOpponent2Name(it) },
+                label = stringResource(R.string.opponent_2_name),
+                modifier = Modifier.fillMaxWidth()
             )
         }
-
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
@@ -672,7 +820,6 @@ fun SessionScreen(
 
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
-        val context = LocalContext.current
 
         // Snackbar host is moved outside the Box to be attached to the screen container
         SnackbarHost(
