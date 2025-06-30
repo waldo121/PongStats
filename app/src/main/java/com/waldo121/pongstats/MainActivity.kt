@@ -119,9 +119,14 @@ import java.net.URLEncoder
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.heightIn
 
 class MainActivity : ComponentActivity() {
     private lateinit var appDatabase: MatchRecordsDatabase
@@ -672,61 +677,101 @@ fun MatchTypeDropdown(
                     }
                 )
             }
+            // Make the whole text field clickable to open the dropdown
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { expanded = true }
+            )
         }
-        // Make the whole text field clickable to open the dropdown
-        androidx.compose.foundation.layout.Box(
-            Modifier
-                .matchParentSize()
-                .clickable { expanded = true }
-        )
     }
 }
 
 @Composable
-fun FilterableDropdown(
+fun AutocompleteTextField(
     options: List<String>,
     selected: String,
     onSelected: (String) -> Unit,
     label: String,
     modifier: Modifier = Modifier
 ) {
-    var expanded by remember { mutableStateOf(false) }
     var text by remember { mutableStateOf(selected) }
+    var filteredOptions by remember { mutableStateOf(options) }
+    var isFiltering by remember { mutableStateOf(false) }
+    var showSuggestions by remember { mutableStateOf(false) }
 
-    Box(modifier) {
+    // Debounce filtering for both typing and deleting characters
+    LaunchedEffect(text, options) {
+        isFiltering = true
+        kotlinx.coroutines.delay(600)
+        filteredOptions = if (text.isBlank()) {
+            emptyList()
+        } else {
+            options.filter { it.contains(text, ignoreCase = true) }
+        }
+        isFiltering = false
+    }
+
+    Column(modifier) {
         OutlinedTextField(
             value = text,
             onValueChange = {
                 text = it
-                expanded = true
+                showSuggestions = true
+                isFiltering = true
+                onSelected(it)
             },
             label = { Text(label) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            trailingIcon = {
-                Icon(
-                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = null,
-                    Modifier.clickable { expanded = !expanded }
-                )
-            }
+            trailingIcon = null,
+            keyboardOptions = KeyboardOptions.Default.copy(
+                imeAction = KeyboardOptions.Default.imeAction
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    showSuggestions = false
+                    onSelected(text)
+                }
+            )
         )
-        val filteredOptions = options.filter { it.contains(text, ignoreCase = true) }
-        DropdownMenu(
-            expanded = expanded && filteredOptions.isNotEmpty(),
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.fillMaxWidth(),
-            offset = DpOffset(0.dp, 0.dp)
-        ) {
-            filteredOptions.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
-                    onClick = {
-                        text = option
-                        onSelected(option)
-                        expanded = false
+        if (showSuggestions && (filteredOptions.isNotEmpty() || (text.isNotBlank() && !options.contains(text)))) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(vertical = 2.dp)
+                    .heightIn(max = 200.dp)
+            ) {
+                items(filteredOptions) { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                text = option
+                                onSelected(option)
+                                showSuggestions = false
+                            }
+                            .padding(12.dp)
+                    ) {
+                        Text(option)
                     }
-                )
+                }
+                if (text.isNotBlank() && !options.contains(text)) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSelected(text)
+                                    showSuggestions = false
+                                }
+                                .padding(12.dp)
+                        ) {
+                            Text("Ajouter un joueur: \"$text\"")
+                        }
+                    }
+                }
             }
         }
     }
@@ -740,6 +785,7 @@ fun SessionScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val allPlayerNames by viewModel.allPlayerNames.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -757,7 +803,7 @@ fun SessionScreen(
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        FilterableDropdown(
+        AutocompleteTextField(
             options = allPlayerNames,
             selected = uiState.opponentName,
             onSelected = { viewModel.updateOpponentName(it) },
@@ -766,7 +812,7 @@ fun SessionScreen(
         )
         if (uiState.matchType == DOUBLE_MATCH) {
             Spacer(modifier = Modifier.height(8.dp))
-            FilterableDropdown(
+            AutocompleteTextField(
                 options = allPlayerNames,
                 selected = uiState.opponent2Name,
                 onSelected = { viewModel.updateOpponent2Name(it) },
@@ -819,7 +865,6 @@ fun SessionScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         val snackbarHostState = remember { SnackbarHostState() }
-        val scope = rememberCoroutineScope()
 
         // Snackbar host is moved outside the Box to be attached to the screen container
         SnackbarHost(
@@ -831,7 +876,8 @@ fun SessionScreen(
             Button(
                 onClick = {
                     val result = viewModel.createMatchRecord()
-                    scope.launch {
+
+                    coroutineScope.launch {
                         if (result) {
                             snackbarHostState.showSnackbar(
                                 message = context.getString(R.string.save_success),

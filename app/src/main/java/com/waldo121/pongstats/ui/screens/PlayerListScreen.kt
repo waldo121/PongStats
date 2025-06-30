@@ -43,11 +43,7 @@ fun PlayerListScreen(
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 24.dp)
         )
-        if (playerNames.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = stringResource(R.string.no_data))
-            }
-        } else {
+        if (playerNames.isNotEmpty()) {
             Spacer(modifier = Modifier.height(24.dp))
             playerNames.forEach { playerName ->
                 Row(
