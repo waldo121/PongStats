@@ -22,6 +22,16 @@ PongStats is an Android application designed to help table tennis players track 
   - Responsive layout
   - Dark/light theme support
 
+## Screenshots
+
+**Main Statistics Screen**
+
+![Statistics Screen](screenshots/statistics.png)
+
+**Player Profile Screen**
+
+![Player Profile Screen](screenshots/player_profile.png)
+
 ## Technical Details
 
 ### Requirements
