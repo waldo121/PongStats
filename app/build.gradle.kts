@@ -1,3 +1,12 @@
+import java.util.Properties
+
+val keystoreProperties = Properties().apply {
+    val keystoreFile = rootProject.file("keystore.properties")
+    if (keystoreFile.exists()) {
+        keystoreFile.inputStream().use { load(it) }
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -22,14 +31,32 @@ android {
             useSupportLibrary = true
         }
     }
+    signingConfigs {
+        create("release") {
+            val envStoreFile = System.getenv("KEYSTORE_PATH")
+            val envStorePassword = System.getenv("KEYSTORE_PASSWORD")
+            val envKeyAlias = System.getenv("KEY_ALIAS")
+            val envKeyPassword = System.getenv("KEY_PASSWORD")
+
+            storeFile = file(
+                envStoreFile
+                    ?: keystoreProperties.getProperty("KEYSTORE_PATH")
+                    ?: "debug.keystore"
+            )
+            storePassword = envStorePassword ?: keystoreProperties.getProperty("KEYSTORE_PASSWORD") ?: "android"
+            keyAlias = envKeyAlias ?: keystoreProperties.getProperty("KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword = envKeyPassword ?: keystoreProperties.getProperty("KEY_PASSWORD") ?: "android"
+        }
+    }
 
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -67,4 +94,10 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+tasks.register("printVersion") {
+    doLast {
+        println(android.defaultConfig.versionName)
+    }
 }
