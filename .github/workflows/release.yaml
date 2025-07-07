@@ -1,0 +1,53 @@
+name: Create a signed Android(apk) release
+
+permissions:
+  contents:
+    write
+
+on: 
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'The type of release to create'
+        type: choice
+        required: false
+        default: 'prerelease'
+        options:
+          - prerelease
+          - release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v4
+
+        - uses: actions/setup-java@v4
+          with: 
+            distribution: 'temurin'
+            java-version: '17'
+
+        - name: Decode the keystore
+          run: |
+            echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > pongstats.jks
+            echo "KEYSTORE_PATH=$PWD/pongstats.jks" >> $GITHUB_ENV
+        
+        - name: Build signed APK
+          env:
+            KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+            KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+            KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+            KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          run: ./gradlew assembleRelease --no-daemon
+        
+        - name: Check tag
+          run: echo "RELEASE_TAG=v`./gradlew -q printVersion`" >> $GITHUB_ENV
+
+        - name: Create a github relase with the signed apk
+          uses: softprops/action-gh-release@v2
+          with:
+            files: app/build/outputs/apk/release/app-release.apk
+            prerelease: ${{ inputs.release_type  == 'prerelease' }}
+            tag_name: ${{ env.RELEASE_TAG }}
+          env: 
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
