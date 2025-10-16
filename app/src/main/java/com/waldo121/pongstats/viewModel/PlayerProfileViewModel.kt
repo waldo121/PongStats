@@ -30,15 +30,15 @@ class PlayerProfileViewModel(
                 val totalWins = single.sumOf { it.numberOfWins } + double.sumOf {
                     when (playerName) {
                         it.opponent1Name -> it.numberOfWins
-                        it.opponent2Name -> 0 // Only count wins for the player if they are opponent1
-                        else -> 0
+                        it.opponent2Name -> it.numberOfWins
+                        else -> 0 //playerName is not matched
                     }
                 }
                 val totalDefeats = single.sumOf { it.numberOfDefeats } + double.sumOf {
                     when (playerName) {
-                        it.opponent1Name -> it.numberOfDefeats
-                        it.opponent2Name -> 0 // Only count defeats for the player if they are opponent1
-                        else -> 0
+                        it.opponent1Name -> it.numberOfWins
+                        it.opponent2Name -> it.numberOfWins 
+                        else -> 0 //playerName is not matched
                     }
                 }
                 val totalMatches = totalWins + totalDefeats
