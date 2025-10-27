@@ -1,26 +1,8 @@
 # PongStats
 
-PongStats is an Android application designed to help table tennis players track and analyze their performance statistics. The app allows users to record match results for both singles and doubles games, providing insights into win rates and performance trends over time.
+PongStats is an Android application I have written to collect data about my caual table tennis matches.
+It also allows viewing evolution of performance through graphs. 
 
-## Features
-
-- **Match Recording**
-  - Record singles and doubles matches
-  - Track wins and losses
-  - Store opponent information
-  - Support for multiple sessions
-
-- **Statistics**
-  - Current win rate display for both singles and doubles
-  - Daily win rate tracking
-  - Visual performance trends through interactive charts
-  - Separate statistics for singles and doubles matches
-
-- **User Interface**
-  - Clean, modern Material Design 3 interface
-  - Intuitive navigation
-  - Responsive layout
-  - Dark/light theme support
 
 ## Screenshots
 
@@ -32,39 +14,19 @@ PongStats is an Android application designed to help table tennis players track 
 
 ![Player Profile Screen](screenshots/player_profile.png)
 
-## Technical Details
 
-### Requirements
-- Android 9.0 (API level 28) or higher
-- Kotlin 1.8.0 or higher
-- Android Studio Hedgehog or higher
+## Dependencies
+- kotlin >= 1.8.0
+- Android 9.0 (API level 28) 
+    
+Why so old, you might wonder?
+    I had to support my old phone
 
-### Dependencies
-- Jetpack Compose for UI
-- Room Database for local storage
-- Vico Charts for statistics visualization
-- Material 3 for theming
-- Navigation Compose for navigation
-
-### Architecture
-- MVVM (Model-View-ViewModel) architecture
-- Repository pattern for data management
-- Use cases for business logic
-- Kotlin Coroutines for asynchronous operations
-- Flow for reactive programming
 
 ## Building the Project
 
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/PongStats.git
-```
+The project is managed using gradle (https://gradle.org/).
 
-2. Open the project in Android Studio
-
-3. Sync the project with Gradle files
-
-4. Build and run the application
 
 ## Versioning
 
@@ -84,9 +46,3 @@ The app follows semantic versioning:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Material Design 3 for the UI components
-- Vico Charts for the statistics visualization
-- Jetpack Compose team for the modern UI toolkit
