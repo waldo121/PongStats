@@ -16,34 +16,20 @@ class PlayerProfileViewModel(
     private val repository: MatchRecordRepository,
     private val playerName: String
 ) : ViewModel() {
-    private val _stats = MutableStateFlow(PlayerStatsUi(0, 0, 0, 0))
+    private val _stats = MutableStateFlow(PlayerStatsUi(0, 0,  0))
     val stats: StateFlow<PlayerStatsUi> = _stats.asStateFlow()
 
     init {
         viewModelScope.launch {
             combine(
-                repository.getAllSingleMatchRecords(),
-                repository.getAllDoubleMatchRecords()
+                repository.getAllSingleMatchRecords()
             ) { singleMatches, doubleMatches ->
                 val single = singleMatches.filter { it.opponentName == playerName }
-                val double = doubleMatches.filter { it.opponent1Name == playerName || it.opponent2Name == playerName }
-                val totalWins = single.sumOf { it.numberOfWins } + double.sumOf {
-                    when (playerName) {
-                        it.opponent1Name -> it.numberOfWins
-                        it.opponent2Name -> it.numberOfWins
-                        else -> 0 //playerName is not matched
-                    }
-                }
-                val totalDefeats = single.sumOf { it.numberOfDefeats } + double.sumOf {
-                    when (playerName) {
-                        it.opponent1Name -> it.numberOfWins
-                        it.opponent2Name -> it.numberOfWins 
-                        else -> 0 //playerName is not matched
-                    }
-                }
+                val totalWins = single.sumOf { it.numberOfWins } 
+                val totalDefeats = single.sumOf { it.numberOfDefeats } 
                 val totalMatches = totalWins + totalDefeats
                 val winRate = if (totalMatches > 0) (totalWins * 100 / totalMatches) else 0
-                PlayerStatsUi(totalWins, totalDefeats, totalMatches, winRate)
+                PlayerStatsUi(totalWins, totalDefeats, winRate)
             }.collect { _stats.value = it }
         }
     }
