@@ -127,12 +127,20 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.heightIn
+import android.widget.Toast
+
 
 class MainActivity : ComponentActivity() {
     private lateinit var appDatabase: MatchRecordsDatabase
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appDatabase = MatchRecordsDatabase.getDatabase(this)
+
+        lifecycleScope.launch {
+            val path = exportRoomDatabase(this@MainActivity, MyRoomDatabase.getInstance(this@MainActivity))
+            Toast.makeText(this@MainActivity, "Export terminé : $path", Toast.LENGTH_LONG).show()
+        }
+                   
         enableEdgeToEdge()
         setContent {
             App(
