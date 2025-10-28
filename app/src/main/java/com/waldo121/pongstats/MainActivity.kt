@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.lifecycleScope
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
@@ -95,8 +96,10 @@ import com.waldo121.pongstats.ui.theme.PingPongWood
 import com.waldo121.pongstats.ui.theme.PongStatsTheme
 import com.waldo121.pongstats.viewModel.MatchRecordViewModel
 import com.waldo121.pongstats.viewModel.StatisticsViewModel
+import com.waldo121.pongstats.util.ExportRoomDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -137,8 +140,10 @@ class MainActivity : ComponentActivity() {
         appDatabase = MatchRecordsDatabase.getDatabase(this)
 
         lifecycleScope.launch {
-            val path = exportRoomDatabase(this@MainActivity, appDatabase)
-            Toast.makeText(this@MainActivity, "Export terminé : $path", Toast.LENGTH_LONG).show()
+            val path = ExportRoomDatabase(this@MainActivity, appDatabase)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@MainActivity, "Export terminé : $path", Toast.LENGTH_LONG).show()
+            }
         }
                    
         enableEdgeToEdge()

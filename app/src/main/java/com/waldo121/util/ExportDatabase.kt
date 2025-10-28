@@ -7,17 +7,20 @@ import com.google.gson.GsonBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.waldo121.pongstats.data.local.dao.DoubleMatchRecordDao
+import com.waldo121.pongstats.data.local.dao.SingleMatchRecordDao
+import com.waldo121.pongstats.data.local.MatchRecordsDatabase
 
 // Fonction d'export complète
-suspend fun exportRoomDatabase(context: Context, db: MatchRecordsDatabase) = withContext(Dispatchers.IO) {
+suspend fun ExportRoomDatabase(context: Context, db: MatchRecordsDatabase) = withContext(Dispatchers.IO) {
     val gson = GsonBuilder().setPrettyPrinting().create()
 
     // 🔹 Récupère les données de chaque DAO
     val singleMatches = db.singleMatchRecordDao().getAll()
-    val doubleMatches = db.DoubleMatchRecordDao().getAll()
+    val doubleMatches = db.doubleMatchRecordDao().getAll()
 
     // 🔹 Mets tout dans un seul objet
-    val exportData = mapOf(
+    val exportData: Map<String, Any> = mapOf(
         "single_match_records" to singleMatches,
         "double_match_records" to doubleMatches,
     )
