@@ -137,7 +137,7 @@ class MainActivity : ComponentActivity() {
         appDatabase = MatchRecordsDatabase.getDatabase(this)
 
         lifecycleScope.launch {
-            val path = exportRoomDatabase(this@MainActivity, MyRoomDatabase.getInstance(this@MainActivity))
+            val path = exportRoomDatabase(this@MainActivity, appDatabase)
             Toast.makeText(this@MainActivity, "Export terminé : $path", Toast.LENGTH_LONG).show()
         }
                    

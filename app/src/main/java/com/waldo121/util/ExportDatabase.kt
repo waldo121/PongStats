@@ -9,13 +9,12 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 // Fonction d'export complète
-suspend fun exportRoomDatabase(context: Context, db: MyRoomDatabase) = withContext(Dispatchers.IO) {
+suspend fun exportRoomDatabase(context: Context, db: MatchRecordsDatabase) = withContext(Dispatchers.IO) {
     val gson = GsonBuilder().setPrettyPrinting().create()
 
     // 🔹 Récupère les données de chaque DAO
-    val users = db.userDao().getAll()
-    val orders = db.orderDao().getAll()
-    val products = db.productDao().getAll()
+    val singleMatches = db.singleMatchRecordDao().getAll()
+    val doubleMatches = db.DoubleMatchRecordDao().getAll()
 
     // 🔹 Mets tout dans un seul objet
     val exportData = mapOf(
