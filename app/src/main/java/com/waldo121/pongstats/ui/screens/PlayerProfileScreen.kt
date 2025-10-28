@@ -196,6 +196,5 @@ fun PlayerProfileScreen(
 data class PlayerStatsUi(
     val totalWins: Int,
     val totalDefeats: Int,
-    val totalMatches: Int,
     val winRate: Int
 ) 
