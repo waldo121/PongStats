@@ -85,6 +85,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
+    implementation(libs.vico.core)
     annotationProcessor(libs.androidx.room.compiler)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
