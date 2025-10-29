@@ -31,14 +31,16 @@ jobs:
           run: |
             echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > pongstats.jks
             echo "KEYSTORE_PATH=$PWD/pongstats.jks" >> $GITHUB_ENV
-        
+         
         - name: Build signed APK
           env:
             KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
             KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
             KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
             KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          run: ./gradlew assembleRelease --no-daemon
+          run: |
+            ./gradlew lint --no-daemon
+            ./gradlew assembleRelease --no-daemon
         
         - name: Check tag
           run: echo "RELEASE_TAG=v`./gradlew -q printVersion`" >> $GITHUB_ENV
