@@ -68,7 +68,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -84,8 +83,6 @@ import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerModel
-import com.patrykandpatrick.vico.core.cartesian.data.LineCartesianLayerModel.Entry
 import com.waldo121.pongstats.data.local.MatchRecordsDatabase
 import com.waldo121.pongstats.data.repository.MatchRecordRepository
 import com.waldo121.pongstats.domain.CurrentWinRate
@@ -323,67 +320,55 @@ fun AppTopBar(
         modifier = modifier
     )
 }
+
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: StatisticsViewModel,
 ) {
-    // Collect all required Flows
     val singleData by viewModel.uiStateWinRateSingle.collectAsStateWithLifecycle()
     val doubleData by viewModel.uiStateWinRateDouble.collectAsStateWithLifecycle()
     val currentSingleWinRate by viewModel.currentWinRateSingle.collectAsStateWithLifecycle()
     val currentDoubleWinRate by viewModel.currentWinRateDouble.collectAsStateWithLifecycle()
-
-    // Keys for recomposition
+    
     val keySingle = singleData.hashCode()
     val keyDouble = doubleData.hashCode()
     val combinedModelProducer = remember(keySingle, keyDouble) { CartesianChartModelProducer() }
     val coroutineScope = rememberCoroutineScope()
 
-    // Map both datasets to (epochDay, winRate)
-    val singlePoints = singleData.associate {
-        val day = Instant.ofEpochMilli(it.date.time)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-            .toEpochDay()
-            .toFloat()
-        day to it.winRate.toFloat()
-    }
+    val singleSeriesX = singleData.map { Instant.ofEpochMilli(it.date.time).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay().toFloat() }
+    val singleSeriesY = singleData.map { it.winRate.toFloat() }
 
-    val doublePoints = doubleData.associate {
-        val day = Instant.ofEpochMilli(it.date.time)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-            .toEpochDay()
-            .toFloat()
-        day to it.winRate.toFloat()
-    }
-    // Merge all x-values
-    val allX = (singlePoints.keys + doublePoints.keys).distinct().sorted()
+    val doubleSeriesX = doubleData.map { Instant.ofEpochMilli(it.date.time).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay().toFloat() }
+    val doubleSeriesY = doubleData.map { it.winRate.toFloat() }
+
+    // Collect all unique x-values in order
+    val allXValues = (singleSeriesX + doubleSeriesX).distinct().sorted()
+
+    // Dynamically calculate labelEvery so that at most maxLabels are shown
+    val maxLabels = 7
+    val labelEvery = if (allXValues.size <= maxLabels) 1 else (allXValues.size + maxLabels - 1) / maxLabels
+
+    // Determine which series are present and in what order
+    val presentSeries = mutableListOf<String>()
+    if (singleSeriesY.isNotEmpty()) presentSeries.add("singles")
+    if (doubleSeriesY.isNotEmpty()) presentSeries.add("doubles")
 
     LaunchedEffect(keySingle, keyDouble) {
         coroutineScope.launch(Dispatchers.Default) {
-            combinedModelProducer.runTransaction{
+            combinedModelProducer.runTransaction {
                 lineSeries {
-                    // create empty entries for missing data points
-                    series(x = allX, y = allX.map { x -> singlePoints[x] ?: Float.NaN})
-                    series(x = allX, y = allX.map { x -> doublePoints[x] ?: Float.NaN})
+                    if (singleSeriesX.isNotEmpty() && singleSeriesY.isNotEmpty()) {
+                        series(x = singleSeriesX, y = singleSeriesY)
+                    }
+                    if (doubleSeriesX.isNotEmpty() && doubleSeriesY.isNotEmpty()) {
+                        series(x = doubleSeriesX, y = doubleSeriesY)
+                    }
                 }
             }
         }
     }
 
-    // Dynamically calculate labelEvery so that at most maxLabels are shown
-    val maxLabels = 7
-    val labelEvery = if (allX.size <= maxLabels) 1 else (allX.size + maxLabels - 1) / maxLabels
-
-    // Determine which series are present for legend
-    val presentSeries = mutableListOf<String>().apply {
-        if (singleData.isNotEmpty()) add("singles")
-        if (doubleData.isNotEmpty()) add("doubles")
-    }
-
-    // Main UI
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -397,7 +382,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
-            textAlign = TextAlign.Center
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
         // Win rates side by side
@@ -460,7 +445,7 @@ fun HomeScreen(
                 title = stringResource(R.string.daily_win_rate),
                 showLegend = true,
                 presentSeries = presentSeries,
-                allXValues = allX,
+                allXValues = allXValues,
                 labelEvery = labelEvery
             )
         } else {
