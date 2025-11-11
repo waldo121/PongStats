@@ -23,8 +23,8 @@ android {
         minSdk = 28
         //noinspection ExpiredTargetSdkVersion
         targetSdk = 28
-        versionCode = 7
-        versionName = "1.1.5-rc1"
+        versionCode = 8
+        versionName = "1.1.5-rc2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
