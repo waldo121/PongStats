@@ -35,4 +35,5 @@
     <string name="player_stats">Statistiques contre ce joueur</string>
     <string name="back_to_player_list">Retour à la liste</string>
     <string name="no_matches_against_player">Aucun match contre ce joueur</string>
+    <string name="date_axis">Date</string>
 </resources>

@@ -26,7 +26,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
@@ -34,9 +33,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -49,7 +45,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -71,9 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.lifecycleScope
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
@@ -90,7 +83,6 @@ import com.waldo121.pongstats.domain.DailyWinRateUseCase
 import com.waldo121.pongstats.ui.theme.PingPongBlack
 import com.waldo121.pongstats.ui.theme.PingPongDarkGrey
 import com.waldo121.pongstats.ui.theme.PingPongDarkRed
-import com.waldo121.pongstats.ui.theme.PingPongLightWood
 import com.waldo121.pongstats.ui.theme.PingPongRed
 import com.waldo121.pongstats.ui.theme.PingPongWood
 import com.waldo121.pongstats.ui.theme.PongStatsTheme
@@ -98,10 +90,7 @@ import com.waldo121.pongstats.viewModel.MatchRecordViewModel
 import com.waldo121.pongstats.viewModel.StatisticsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.round
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import java.time.Instant
@@ -124,12 +113,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.heightIn
-import android.widget.Toast
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.core.cartesian.Scroll
+import com.waldo121.pongstats.ui.components.xLabelFormatter
 
 
 class MainActivity : ComponentActivity() {
@@ -345,10 +336,6 @@ fun HomeScreen(
     // Collect all unique x-values in order
     val allXValues = (singleSeriesX + doubleSeriesX).distinct().sorted()
 
-    // Dynamically calculate labelEvery so that at most maxLabels are shown
-    val maxLabels = 7
-    val labelEvery = if (allXValues.size <= maxLabels) 1 else (allXValues.size + maxLabels - 1) / maxLabels
-
     // Determine which series are present and in what order
     val presentSeries = mutableListOf<String>()
     if (singleSeriesY.isNotEmpty()) presentSeries.add("singles")
@@ -441,12 +428,11 @@ fun HomeScreen(
         if (singleData.isNotEmpty() || doubleData.isNotEmpty()) {
             WinRateChart(
                 modelProducer = combinedModelProducer,
-                modifier = Modifier.padding(vertical = 8.dp),
+                modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
                 title = stringResource(R.string.daily_win_rate),
                 showLegend = true,
                 presentSeries = presentSeries,
                 allXValues = allXValues,
-                labelEvery = labelEvery
             )
         } else {
             EmptyChartPlaceholder(
@@ -488,11 +474,10 @@ private fun WinRateChart(
     showLegend: Boolean = false,
     presentSeries: List<String>,
     allXValues: List<Float>,
-    labelEvery: Int = 5
 ) {
     val singlesColor = PingPongRed
     val doublesColor = PingPongDarkRed
-
+    val scrollState = rememberVicoScrollState(scrollEnabled = false)
     val lines = presentSeries.map { series ->
         when (series) {
             "singles" -> LineCartesianLayer.Line(
@@ -535,19 +520,11 @@ private fun WinRateChart(
                     }
                 ),
                 bottomAxis = HorizontalAxis.rememberBottom(
-                    itemPlacer = HorizontalAxis.ItemPlacer.aligned(),
-                    valueFormatter = { _, value, _ ->
-                        val index = allXValues.indexOf(value.toFloat())
-                        if (index >= 0 && index % labelEvery == 0) {
-                            val date = LocalDate.ofEpochDay(value.toLong())
-                            date.format(DateTimeFormatter.ofPattern("MMM, YYYY"))
-                        } else {
-                            ""
-                        }
-                    },
-                    labelRotationDegrees = 30f
+                    valueFormatter = xLabelFormatter(allXValues),
+                    labelRotationDegrees = 40f,
                 ),
             ),
+            scrollState = scrollState,
             modelProducer = modelProducer,
             modifier = Modifier
                 .fillMaxWidth()

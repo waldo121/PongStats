@@ -37,11 +37,13 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.waldo121.pongstats.R
+import com.waldo121.pongstats.ui.components.xLabelFormatter
 import com.waldo121.pongstats.ui.theme.PingPongDarkRed
 import com.waldo121.pongstats.ui.theme.PingPongRed
 import kotlinx.coroutines.Dispatchers
@@ -66,8 +68,7 @@ fun PlayerProfileScreen(
     val seriesX = chartData.map { Instant.ofEpochMilli(it.date.time).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay().toFloat() }
     val seriesY = chartData.map { it.winRate.toFloat() }
     val allXValues = seriesX.distinct().sorted()
-    val maxLabels = 7
-    val labelEvery = if (allXValues.size <= maxLabels) 1 else (allXValues.size + maxLabels - 1) / maxLabels
+    val scrollState = rememberVicoScrollState(scrollEnabled = false)
 
     LaunchedEffect(key) {
         coroutineScope.launch(Dispatchers.Default) {
@@ -168,19 +169,11 @@ fun PlayerProfileScreen(
                             }
                         ),
                         bottomAxis = HorizontalAxis.rememberBottom(
-                            itemPlacer = HorizontalAxis.ItemPlacer.aligned(),
-                            valueFormatter = { _, value, _ ->
-                                val index = allXValues.indexOf(value.toFloat())
-                                if (index >= 0 && index % labelEvery == 0) {
-                                    val date = LocalDate.ofEpochDay(value.toLong())
-                                    date.format(DateTimeFormatter.ofPattern("MMM, yyyy"))
-                                } else {
-                                    ""
-                                }
-                            },
-                            labelRotationDegrees = 30f
+                            valueFormatter = xLabelFormatter(allXValues),
+                            labelRotationDegrees = 40f
                         ),
                     ),
+                    scrollState = scrollState,
                     modelProducer = modelProducer,
                     modifier = Modifier
                         .fillMaxWidth()
