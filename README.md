@@ -2,6 +2,7 @@
 
 PongStats is an Android application I have written to collect data about my caual table tennis matches.
 It also allows viewing evolution of performance through graphs. 
+I started this project as an AI Assisted development experiment but then adandonned AI because I didn't like using the tools. 
 
 
 ## Screenshots
@@ -35,13 +36,6 @@ The app follows semantic versioning:
 - Minor version: Backwards-compatible functionality
 - Patch version: Backwards-compatible bug fixes
 
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ## License
 
