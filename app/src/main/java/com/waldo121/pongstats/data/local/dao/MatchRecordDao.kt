@@ -9,19 +9,35 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SingleMatchRecordDao {
-    @Query("SELECT * FROM single_match_records ORDER BY date ASC")
+    @Query("SELECT * " +
+            "FROM single_match_records " +
+            "ORDER BY date ASC")
     fun getAll(): Flow<List<SingleMatchRecordEntity>>
+    @Query("SELECT * " +
+            "FROM single_match_records " +
+            "WHERE opponent_id = :playerId " +
+            "ORDER BY date ASC")
+    fun getMatchesAgainst(playerId: Int): Flow<List<SingleMatchRecordEntity>>
     @Insert
-    fun createRecord(vararg matchRecordEntity: SingleMatchRecordEntity)
-    @Query("SELECT DISTINCT opponentName FROM single_match_records")
-    fun getAllUniqueOpponentNames(): Flow<List<String>>
+    fun createRecord(matchRecordEntity: SingleMatchRecordEntity)
 }
 @Dao
 interface DoubleMatchRecordDao {
-    @Query("SELECT * FROM double_match_records ORDER BY date ASC")
+    @Query("SELECT * " +
+            "FROM double_match_records " +
+            "ORDER BY date ASC")
     fun getAll(): Flow<List<DoubleMatchRecordEntity>>
+    @Query("SELECT * " +
+            "FROM double_match_records " +
+            "WHERE opponent1_id = :playerId " +
+            "OR opponent2_id = :playerId " +
+            "ORDER BY date ASC")
+    fun getMatchesAgainst(playerId: Int): Flow<List<DoubleMatchRecordEntity>>
+    @Query("SELECT *" +
+            "FROM double_match_records " +
+            "WHERE teammate_id= :playerId " +
+            "ORDER BY date ASC")
+    fun getMatchesWith(playerId: Int): Flow<List<DoubleMatchRecordEntity>>
     @Insert
-    fun createRecord(vararg matchRecordEntity: DoubleMatchRecordEntity)
-    @Query("SELECT DISTINCT opponent1Name FROM double_match_records UNION SELECT DISTINCT opponent2Name FROM double_match_records")
-    fun getAllUniqueOpponentNames(): Flow<List<String>>
+    fun createRecord(matchRecordEntity: DoubleMatchRecordEntity)
 }

@@ -1,7 +1,6 @@
 package com.waldo121.pongstats.viewModel
 
-import DoubleMatchRecordsUseCase
-import SingleMatchRecordsUseCase
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -12,23 +11,24 @@ import com.waldo121.pongstats.DOUBLE_MATCH
 import com.waldo121.pongstats.SINGLE_MATCH
 import com.waldo121.pongstats.data.model.DoubleMatchRecord
 import com.waldo121.pongstats.data.model.SingleMatchRecord
+import com.waldo121.pongstats.domain.DoubleMatchRecordsUseCase
+import com.waldo121.pongstats.domain.SingleMatchRecordsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.sql.SQLException
 import java.util.Date
-import com.waldo121.pongstats.data.repository.MatchRecordRepository
-import kotlinx.coroutines.flow.collect
+import kotlin.Int
 
-data class MatchRecordUiState(
+data class SessionFormState(
     val matchType: String = SINGLE_MATCH,
     val numberOfWins: Int = 0,
     val numberOfDefeats: Int = 0,
-    val opponentName: String = "",
-    val opponent2Name: String = "",
+    val opponentId: Int = 0,
+    val opponent2Id: Int = 0,
+    val teammateId: Int = 0
 )
 
 class MatchRecordViewModel(
@@ -36,14 +36,8 @@ class MatchRecordViewModel(
     private val doubleMatchRecordsUseCase: DoubleMatchRecordsUseCase
 ): ViewModel() {
 
-    private val _uiState = MutableStateFlow(MatchRecordUiState())
-    val uiState: StateFlow<MatchRecordUiState> = _uiState.asStateFlow()
-
-    private val _allPlayerNames = MutableStateFlow<List<String>>(emptyList())
-    val allPlayerNames: StateFlow<List<String>> = _allPlayerNames.asStateFlow()
-
-    private val _allSingleMatchRecords = MutableStateFlow<List<SingleMatchRecord>>(emptyList())
-    val allSingleMatchRecords: StateFlow<List<SingleMatchRecord>> = _allSingleMatchRecords.asStateFlow()
+    private val _sessionForm = MutableStateFlow(SessionFormState())
+    val sessionForm: StateFlow<SessionFormState> = _sessionForm.asStateFlow()
 
     companion object {
         val SINGLE_MATCH_USE_CASE_KEY = object : CreationExtras.Key<SingleMatchRecordsUseCase> {}
@@ -58,23 +52,8 @@ class MatchRecordViewModel(
         }
     }
 
-    init {
-        viewModelScope.launch {
-            val repository = singleMatchRecordsUseCase.repository
-            repository.getAllUniquePlayerNames().collect { names ->
-                _allPlayerNames.value = names
-            }
-        }
-        viewModelScope.launch {
-            val repository = singleMatchRecordsUseCase.repository
-            repository.getAllSingleMatchRecords().collect { records ->
-                _allSingleMatchRecords.value = records
-            }
-        }
-    }
-
     fun updateMatchType(matchType: String) {
-        _uiState.update { currentState ->
+        _sessionForm.update { currentState ->
             currentState.copy(
                 matchType = matchType
             )
@@ -82,7 +61,7 @@ class MatchRecordViewModel(
 
     }
     fun updateNumberOfWins(numberOfWins: Int) {
-        _uiState.update { currentState ->
+        _sessionForm.update { currentState ->
             currentState.copy(
                 numberOfWins = numberOfWins
             )
@@ -90,87 +69,82 @@ class MatchRecordViewModel(
     }
     fun updateNumberOfDefeats(numberOfDefeats: Int) {
 
-        _uiState.update { currentState ->
+        _sessionForm.update { currentState ->
             currentState.copy(
                 numberOfDefeats = numberOfDefeats
             )
         }
     }
-    fun updateOpponentName(opponentName: String) {
-        _uiState.update { currentState ->
+    fun updateOpponent(playerId: Int) {
+        _sessionForm.update { currentState ->
             currentState.copy(
-                opponentName = opponentName
+                opponentId = playerId
             )
         }
 
     }
-    fun updateOpponent2Name(opponentName: String) {
-        if (opponentName != _uiState.value.opponentName) {
-            _uiState.update { currentState ->
-                currentState.copy(
-                    opponent2Name = opponentName
-                )
-            }
+    fun updateOpponent2(playerId: Int) {
+        _sessionForm.update { currentState ->
+            currentState.copy(
+                opponent2Id = playerId
+            )
+        }
+
+    }
+    fun updateTeammate(playerId: Int) {
+        _sessionForm.update { currentState ->
+            currentState.copy(
+                teammateId = playerId
+            )
         }
     }
-    fun createMatchRecord(): Boolean {
-        try {
-            if (_uiState.value.matchType == SINGLE_MATCH) {
+    fun createMatchRecord() {
+            if (_sessionForm.value.matchType == SINGLE_MATCH) {
                 val singleMatchRecord = SingleMatchRecord(
-                    numberOfWins = _uiState.value.numberOfWins,
-                    numberOfDefeats = _uiState.value.numberOfDefeats,
-                    opponentName = _uiState.value.opponentName,
+                    numberOfWins = _sessionForm.value.numberOfWins,
+                    numberOfDefeats = _sessionForm.value.numberOfDefeats,
+                    opponentId = _sessionForm.value.opponentId,
                     date = Date()
                 )
                 viewModelScope.launch(Dispatchers.IO) {
-                    singleMatchRecordsUseCase.invoke(singleMatchRecord)
+                    singleMatchRecordsUseCase.create(singleMatchRecord)
                 }
-            } else if (_uiState.value.matchType == DOUBLE_MATCH) {
+            } else if (_sessionForm.value.matchType == DOUBLE_MATCH) {
                 val doubleMatchRecord = DoubleMatchRecord(
-                    numberOfWins = _uiState.value.numberOfWins,
-                    numberOfDefeats = _uiState.value.numberOfDefeats,
-                    opponent1Name = _uiState.value.opponentName,
-                    opponent2Name = _uiState.value.opponent2Name,
+                    numberOfWins = _sessionForm.value.numberOfWins,
+                    numberOfDefeats = _sessionForm.value.numberOfDefeats,
+                    opponent1Id = _sessionForm.value.opponentId,
+                    opponent2Id = _sessionForm.value.opponent2Id,
+                    teammateId = _sessionForm.value.teammateId,
                     date = Date()
                 )
                 viewModelScope.launch(Dispatchers.IO) {
-                    doubleMatchRecordsUseCase.invoke(doubleMatchRecord)
+                    doubleMatchRecordsUseCase.create(doubleMatchRecord)
                 }
             }
             reset()
-            return true
-        } catch (e: SQLException) {
-            return false
-        }
     }
-    fun isNameValid(name: String): Boolean {
-        return name.isNotBlank() && name.isNotEmpty() && name.all { it.isLetter() || it == '-' }
+    fun isResultValid(numberWins: Int, numberDefeats: Int): Boolean {
+        return numberWins+numberDefeats > 0 && numberDefeats >= 0 && numberWins >= 0
     }
-    fun isResultValid(number: Int): Boolean {
-        return number >= 0
+    fun arePlayerIdsValid(playerIds: List<Int>): Boolean {
+        return playerIds.all { id -> id > 0 } && playerIds.distinct().size == playerIds.size
     }
-    fun isTotalValid(numberW: Int, numberD: Int): Boolean {
-        return numberW+numberD > 0
-    }
-    fun isFormDataValid(uiState: MatchRecordUiState): Boolean {
+    fun isFormDataValid(uiState: SessionFormState): Boolean {
         if (
-            _uiState.value.matchType == SINGLE_MATCH
+            _sessionForm.value.matchType == SINGLE_MATCH
         )
-            return isNameValid(uiState.opponentName) &&
-                    isResultValid(uiState.numberOfWins) &&
-                    isResultValid(uiState.numberOfDefeats) &&
-                    isTotalValid(uiState.numberOfWins, uiState.numberOfDefeats)
-        return isNameValid(uiState.opponentName) &&
-                isNameValid(uiState.opponent2Name) &&
-                isResultValid(uiState.numberOfWins) &&
-                isResultValid(uiState.numberOfDefeats) &&
-                isTotalValid(uiState.numberOfWins, uiState.numberOfDefeats)
+            return  arePlayerIdsValid(listOf(uiState.opponentId)) &&
+                    isResultValid(uiState.numberOfWins, uiState.numberOfDefeats)
+        return  arePlayerIdsValid(listOf(uiState.opponentId, uiState.opponent2Id, uiState.teammateId)) &&
+                isResultValid(uiState.numberOfWins, uiState.numberOfDefeats)
     }
     private fun reset() {
-        _uiState.update { currentState ->
+        _sessionForm.update { currentState ->
             currentState.copy(
-                opponentName = "",
-                opponent2Name = "",
+                opponentId = 0,
+                opponent2Id = 0,
+                teammateId = 0,
                 numberOfWins = 0,
                 numberOfDefeats = 0,
             )

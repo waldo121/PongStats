@@ -4,32 +4,38 @@ import com.waldo121.pongstats.data.local.entities.DoubleMatchRecordEntity
 import com.waldo121.pongstats.data.local.entities.SingleMatchRecordEntity
 import java.util.Date
 
-
-data class SingleMatchRecord (
-    val numberOfWins: Int,
-    val numberOfDefeats: Int,
-    val opponentName: String,
-    val date: Date
-)
+abstract class MatchRecord {
+    abstract val numberOfWins: Int
+    abstract val numberOfDefeats: Int
+    abstract val date: Date
+}
+data class SingleMatchRecord(
+    val opponentId: Int,
+    override val numberOfWins: Int,
+    override val numberOfDefeats: Int,
+    override val date: Date
+): MatchRecord()
 
 data class DoubleMatchRecord (
-    val numberOfWins: Int,
-    val numberOfDefeats: Int,
-    val opponent1Name: String,
-    val opponent2Name: String,
-    val date: Date
-)
+    val opponent1Id: Int,
+    val opponent2Id: Int,
+    val teammateId: Int,
+    override val numberOfWins: Int,
+    override val numberOfDefeats: Int,
+    override val date: Date,
+): MatchRecord()
 
 fun SingleMatchRecord.toEntity(): SingleMatchRecordEntity = SingleMatchRecordEntity(
-    opponentName = opponentName,
+    opponentId = opponentId,
     date = date,
     numberOfDefeats = numberOfDefeats,
     numberOfWins = numberOfWins
 )
 
 fun DoubleMatchRecord.toEntity(): DoubleMatchRecordEntity = DoubleMatchRecordEntity(
-    opponent1Name = opponent1Name,
-    opponent2Name = opponent2Name,
+    opponent1Id = opponent1Id,
+    opponent2Id = opponent2Id,
+    teammateId = teammateId,
     date = date,
     numberOfDefeats = numberOfDefeats,
     numberOfWins = numberOfWins

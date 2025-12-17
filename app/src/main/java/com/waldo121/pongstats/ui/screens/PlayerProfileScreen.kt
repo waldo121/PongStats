@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -32,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -43,35 +46,64 @@ import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.waldo121.pongstats.R
-import com.waldo121.pongstats.ui.components.xLabelFormatter
+import com.waldo121.pongstats.data.model.Player
 import com.waldo121.pongstats.ui.theme.PingPongDarkRed
 import com.waldo121.pongstats.ui.theme.PingPongRed
+import com.waldo121.pongstats.ui.utils.QueryState
+import com.waldo121.pongstats.ui.utils.xLabelFormatter
+import com.waldo121.pongstats.viewModel.PlayerViewModel
+import com.waldo121.pongstats.viewModel.StatisticsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.round
 
 @Composable
 fun PlayerProfileScreen(
-    playerName: String,
-    stats: PlayerStatsUi,
-    onBack: () -> Unit,
-    chartData: List<com.waldo121.pongstats.domain.ChartDataPoint> = emptyList(),
-    modifier: Modifier = Modifier
+    playerId: Int,
+    playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
+    statisticsViewModel: StatisticsViewModel,
 ) {
+    val playerUiState by playerViewModel.player.collectAsStateWithLifecycle()
+    LaunchedEffect(playerId) {
+        playerViewModel.get(playerId)
+    }
+    when(playerUiState) {
+        is QueryState.Loading -> {
+            CircularProgressIndicator()
+        }
+        is QueryState.Success<*> -> {
+            val player = (playerUiState as QueryState.Success<Player>).data
+            PlayerContent(player, statisticsViewModel = statisticsViewModel, modifier = modifier)
+        }
+        is QueryState.Error -> {
+            Text("Error: ${(playerUiState as QueryState.Error).message}")
+        }
+    }
+}
+@Composable
+fun PlayerContent(
+    player: Player,
+    modifier: Modifier = Modifier,
+    statisticsViewModel: StatisticsViewModel,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    statisticsViewModel.statsAgainstPlayer(player.id)
+    statisticsViewModel.winRateAgainst(player.id)
+    val statsAgainstPlayer = statisticsViewModel.matchesSummaryAgainst.collectAsStateWithLifecycle().value
+    val chartData = statisticsViewModel.winRateAgainst.collectAsStateWithLifecycle().value
     val key = chartData.hashCode()
     val modelProducer = remember(key) { CartesianChartModelProducer() }
-    val coroutineScope = rememberCoroutineScope()
-    val seriesX = chartData.map { Instant.ofEpochMilli(it.date.time).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay().toFloat() }
-    val seriesY = chartData.map { it.winRate.toFloat() }
+    val seriesX = chartData.map { Instant.ofEpochMilli(it.date.time)
+        .atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay().toFloat() }
+    val seriesY = chartData.map { it.winRate }
     val allXValues = seriesX.distinct().sorted()
     val scrollState = rememberVicoScrollState(scrollEnabled = false)
 
     LaunchedEffect(key) {
-        coroutineScope.launch(Dispatchers.Default) {
+        coroutineScope.launch(Dispatchers.Main) {
             modelProducer.runTransaction {
                 lineSeries {
                     if (seriesX.isNotEmpty() && seriesY.isNotEmpty()) {
@@ -101,7 +133,7 @@ fun PlayerProfileScreen(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = playerName,
+                text = player.name,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -127,16 +159,25 @@ fun PlayerProfileScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Victoires", style = MaterialTheme.typography.bodyMedium)
-                        Text("${stats.totalWins}", color = PingPongRed, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.victories), style = MaterialTheme.typography.bodyMedium)
+                        Text("${statsAgainstPlayer.totalWins}",
+                            color = PingPongRed,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Défaites", style = MaterialTheme.typography.bodyMedium)
-                        Text("${stats.totalDefeats}", color = PingPongDarkRed, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.defeats), style = MaterialTheme.typography.bodyMedium)
+                        Text("${statsAgainstPlayer.totalMatches - statsAgainstPlayer.totalWins}",
+                            color = PingPongDarkRed,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Taux de victoire", style = MaterialTheme.typography.bodyMedium)
-                        Text("${stats.winRate}%", color = PingPongRed, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.win_rate), style = MaterialTheme.typography.bodyMedium)
+                        Text("${statsAgainstPlayer.winRate}%",
+                            color = PingPongRed,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -184,10 +225,3 @@ fun PlayerProfileScreen(
         Spacer(modifier = Modifier.height(56.dp))
     }
 }
-
-// Data class for UI stats
-data class PlayerStatsUi(
-    val totalWins: Int,
-    val totalDefeats: Int,
-    val winRate: Int
-) 

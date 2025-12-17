@@ -2,35 +2,43 @@
 
 package com.waldo121.pongstats
 
-import DoubleMatchRecordsUseCase
-import SingleMatchRecordsUseCase
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,68 +70,64 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.waldo121.pongstats.data.local.MatchRecordsDatabase
+import com.waldo121.pongstats.data.model.Player
 import com.waldo121.pongstats.data.repository.MatchRecordRepository
-import com.waldo121.pongstats.domain.CurrentWinRate
-import com.waldo121.pongstats.domain.DailyWinRateUseCase
+import com.waldo121.pongstats.domain.DoubleMatchRecordsUseCase
+import com.waldo121.pongstats.domain.GlobalStatisticsUseCase
+import com.waldo121.pongstats.domain.MatchesSummary
+import com.waldo121.pongstats.domain.PlayerStatisticsUseCase
+import com.waldo121.pongstats.domain.PlayerUseCase
+import com.waldo121.pongstats.domain.SingleMatchRecordsUseCase
+import com.waldo121.pongstats.domain.StatisticsModelUseCase
+import com.waldo121.pongstats.ui.screens.PlayerListScreen
+import com.waldo121.pongstats.ui.screens.PlayerProfileScreen
 import com.waldo121.pongstats.ui.theme.PingPongBlack
 import com.waldo121.pongstats.ui.theme.PingPongDarkGrey
 import com.waldo121.pongstats.ui.theme.PingPongDarkRed
 import com.waldo121.pongstats.ui.theme.PingPongRed
 import com.waldo121.pongstats.ui.theme.PingPongWood
 import com.waldo121.pongstats.ui.theme.PongStatsTheme
+import com.waldo121.pongstats.ui.utils.QueryState
+import com.waldo121.pongstats.ui.utils.xLabelFormatter
 import com.waldo121.pongstats.viewModel.MatchRecordViewModel
+import com.waldo121.pongstats.viewModel.PlayerViewModel
 import com.waldo121.pongstats.viewModel.StatisticsViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.round
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import java.time.Instant
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.waldo121.pongstats.ui.screens.PlayerListScreen
-import com.waldo121.pongstats.ui.screens.PlayerProfileScreen
-import com.waldo121.pongstats.viewModel.PlayerListViewModel
-import com.waldo121.pongstats.viewModel.PlayerListViewModelFactory
-import com.waldo121.pongstats.viewModel.PlayerProfileViewModel
-import com.waldo121.pongstats.viewModel.PlayerProfileViewModelFactory
-import java.net.URLDecoder
-import java.net.URLEncoder
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.ui.unit.DpOffset
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.heightIn
-import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
-import com.patrykandpatrick.vico.core.cartesian.Scroll
-import com.waldo121.pongstats.ui.components.xLabelFormatter
 
+
+const val TAG: String = "MyActivity"
 
 class MainActivity : ComponentActivity() {
+
     private lateinit var appDatabase: MatchRecordsDatabase
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -132,7 +136,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             App(
                 modifier = Modifier,
-                MatchRecordRepository(appDatabase)
+                MatchRecordRepository(appDatabase, Dispatchers.IO)
             )
         }
     }
@@ -153,7 +157,22 @@ fun App(
     val statisticsViewModel: StatisticsViewModel = viewModel(
         factory = StatisticsViewModel.Factory,
         extras = MutableCreationExtras().apply {
-            set(StatisticsViewModel.DAILY_WIN_RATE_USE_CASE, DailyWinRateUseCase(matchRecordRepository))
+            set(StatisticsViewModel.GLOBAL_STATS_USE_CASE_KEY, GlobalStatisticsUseCase(
+                SingleMatchRecordsUseCase(matchRecordRepository),
+                DoubleMatchRecordsUseCase(matchRecordRepository),
+                statisticsModelUseCase = StatisticsModelUseCase()
+            ))
+            set(StatisticsViewModel.PLAYER_STATS_USE_CASE_KEY, PlayerStatisticsUseCase(
+                SingleMatchRecordsUseCase(matchRecordRepository),
+                DoubleMatchRecordsUseCase(matchRecordRepository),
+                statisticsModelUseCase = StatisticsModelUseCase()
+            ))
+        }
+    )
+    val playerViewModel: PlayerViewModel = viewModel(
+        factory = PlayerViewModel.Factory,
+        extras = MutableCreationExtras().apply {
+            set(PlayerViewModel.PLAYER_USE_CASE_KEY, PlayerUseCase(matchRecordRepository))
         }
     )
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -167,8 +186,8 @@ fun App(
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.statististics)) },
-                        label = { Text(stringResource(R.string.statististics)) },
+                        icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.statistics)) },
+                        label = { Text(stringResource(R.string.statistics)) },
                         selected = selectedTab == 0,
                         onClick = {
                             selectedTab = 0
@@ -237,52 +256,33 @@ fun App(
                         1 -> {
                             SessionScreen(
                                 modifier = Modifier.padding(innerPadding),
-                                viewModel = matchRecordViewModel,
+                                matchRecordViewModel = matchRecordViewModel,
+                                playerViewModel = playerViewModel
                             )
                         }
                         2 -> {
-                            val playerListViewModel: PlayerListViewModel = viewModel(
-                                factory = PlayerListViewModelFactory(matchRecordRepository)
-                            )
-                            val playerNames = playerListViewModel.playerNames.collectAsStateWithLifecycle().value
+
+                            val players = playerViewModel.players.collectAsStateWithLifecycle().value
                             PlayerListScreen(
-                                playerNames = playerNames,
-                                onPlayerSelected = { playerName ->
-                                    navController.navigate("player_profile/" + URLEncoder.encode(playerName, "UTF-8"))
-                                }
+                                players = players,
+                                onPlayerSelected = { playerId ->
+                                    navController.navigate("player_profile/" + playerId)
+                                },
+                                playerViewModel = playerViewModel
                             )
                         }
                     }
                 }
                 composable(
-                    "player_profile/{playerName}",
-                    arguments = listOf(navArgument("playerName") { type = NavType.StringType })
+                    "player_profile/{playerId}",
+                    arguments = listOf(navArgument("playerId") { type = NavType.IntType })
                 ) { backStackEntry ->
-                    val playerName = backStackEntry.arguments?.getString("playerName")?.let {
-                        URLDecoder.decode(it, "UTF-8")
-                    } ?: ""
-                    val playerProfileViewModel: PlayerProfileViewModel = viewModel(
-                        factory = PlayerProfileViewModelFactory(matchRecordRepository, playerName)
-                    )
-                    val stats = playerProfileViewModel.stats.collectAsStateWithLifecycle().value
-                    // Use the new allSingleMatchRecords StateFlow for contextualized chart
-                    val allSingleMatchRecords by matchRecordViewModel.allSingleMatchRecords.collectAsStateWithLifecycle()
-                    val playerSingles = allSingleMatchRecords.filter { it.opponentName == playerName }
-                    val playerChartData = playerSingles
-                        .groupBy { it.date }
-                        .map { (date, matchesAtDate) ->
-                            val wins = matchesAtDate.sumOf { it.numberOfWins }
-                            val defeats = matchesAtDate.sumOf { it.numberOfDefeats }
-                            val total = wins + defeats
-                            val winRate = if (total > 0) (wins * 100 / total) else 0
-                            com.waldo121.pongstats.domain.ChartDataPoint(date, winRate)
-                        }
-                        .sortedBy { it.date }
+                    val playerId = backStackEntry.arguments?.getInt("playerId")?: 0
+
                     PlayerProfileScreen(
-                        playerName = playerName,
-                        stats = stats,
-                        onBack = { navController.popBackStack() },
-                        chartData = playerChartData,
+                        playerId = playerId,
+                        statisticsViewModel = statisticsViewModel,
+                        playerViewModel = playerViewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -317,10 +317,10 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: StatisticsViewModel,
 ) {
-    val singleData by viewModel.uiStateWinRateSingle.collectAsStateWithLifecycle()
-    val doubleData by viewModel.uiStateWinRateDouble.collectAsStateWithLifecycle()
-    val currentSingleWinRate by viewModel.currentWinRateSingle.collectAsStateWithLifecycle()
-    val currentDoubleWinRate by viewModel.currentWinRateDouble.collectAsStateWithLifecycle()
+    val singleData by viewModel.winRateSingle.collectAsStateWithLifecycle()
+    val doubleData by viewModel.winRateDouble.collectAsStateWithLifecycle()
+    val currentSingleWinRate by viewModel.matchesSummarySingle.collectAsStateWithLifecycle()
+    val currentDoubleWinRate by viewModel.matchesSummaryDouble.collectAsStateWithLifecycle()
     
     val keySingle = singleData.hashCode()
     val keyDouble = doubleData.hashCode()
@@ -328,10 +328,10 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
 
     val singleSeriesX = singleData.map { Instant.ofEpochMilli(it.date.time).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay().toFloat() }
-    val singleSeriesY = singleData.map { it.winRate.toFloat() }
+    val singleSeriesY = singleData.map { it.winRate }
 
     val doubleSeriesX = doubleData.map { Instant.ofEpochMilli(it.date.time).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay().toFloat() }
-    val doubleSeriesY = doubleData.map { it.winRate.toFloat() }
+    val doubleSeriesY = doubleData.map { it.winRate }
 
     // Collect all unique x-values in order
     val allXValues = (singleSeriesX + doubleSeriesX).distinct().sorted()
@@ -369,7 +369,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
 
         // Win rates side by side
@@ -393,7 +393,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
                 CurrentWinRateCard(
-                    currentWinRate = currentSingleWinRate,
+                    matchesSummary = currentSingleWinRate,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp)
@@ -414,7 +414,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
                 CurrentWinRateCard(
-                    currentWinRate = currentDoubleWinRate,
+                    matchesSummary = currentDoubleWinRate,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp)
@@ -428,7 +428,9 @@ fun HomeScreen(
         if (singleData.isNotEmpty() || doubleData.isNotEmpty()) {
             WinRateChart(
                 modelProducer = combinedModelProducer,
-                modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .fillMaxWidth(),
                 title = stringResource(R.string.daily_win_rate),
                 showLegend = true,
                 presentSeries = presentSeries,
@@ -445,7 +447,7 @@ fun HomeScreen(
 
 @Composable
 private fun CurrentWinRateCard(
-    currentWinRate: CurrentWinRate,
+    matchesSummary: MatchesSummary,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -458,7 +460,7 @@ private fun CurrentWinRateCard(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "${round(currentWinRate.winRate).toInt()}%",
+            text = "${round(matchesSummary.winRate).toInt()}%",
             style = MaterialTheme.typography.headlineLarge,
             color = PingPongRed,
             fontWeight = FontWeight.Bold
@@ -609,7 +611,7 @@ private fun EmptyChartPlaceholder(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -669,28 +671,19 @@ fun MatchTypeDropdown(
 }
 
 @Composable
-fun AutocompleteTextField(
-    options: List<String>,
-    selected: String,
-    onSelected: (String) -> Unit,
+fun PlayerSelectionField(
+    onSelected: (Int) -> Unit,
     label: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier,
+    playerViewModel: PlayerViewModel
 ) {
-    var text by remember { mutableStateOf(selected) }
-    var filteredOptions by remember { mutableStateOf(options) }
-    var isFiltering by remember { mutableStateOf(false) }
-    var showSuggestions by remember { mutableStateOf(false) }
-
+    var text by remember { mutableStateOf("") }
+    val playersSearchResultUiState by playerViewModel.searchedPlayers.collectAsStateWithLifecycle()
+    var showSuggestions by remember { mutableStateOf(true) }
     // Debounce filtering for both typing and deleting characters
-    LaunchedEffect(text, options) {
-        isFiltering = true
-        kotlinx.coroutines.delay(600)
-        filteredOptions = if (text.isBlank()) {
-            emptyList()
-        } else {
-            options.filter { it.contains(text, ignoreCase = true) }
-        }
-        isFiltering = false
+    LaunchedEffect(text) {
+        delay(600)
+        playerViewModel.searchPlayers(text)
     }
 
     Column(modifier) {
@@ -699,8 +692,6 @@ fun AutocompleteTextField(
             onValueChange = {
                 text = it
                 showSuggestions = true
-                isFiltering = true
-                onSelected(it)
             },
             label = { Text(label) },
             modifier = Modifier.fillMaxWidth(),
@@ -712,59 +703,52 @@ fun AutocompleteTextField(
             keyboardActions = KeyboardActions(
                 onDone = {
                     showSuggestions = false
-                    onSelected(text)
                 }
             )
         )
-        if (showSuggestions && (filteredOptions.isNotEmpty() || (text.isNotBlank() && !options.contains(text)))) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(vertical = 2.dp)
-                    .heightIn(max = 200.dp)
-            ) {
-                items(filteredOptions) { option ->
-                    Row(
+        println(playersSearchResultUiState)
+        when (playersSearchResultUiState) {
+            is QueryState.Loading -> null
+            is QueryState.Success -> {
+                val searchResults = (playersSearchResultUiState as QueryState.Success<List<Player>>).data
+                if (showSuggestions) {
+                    LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                text = option
-                                onSelected(option)
-                                showSuggestions = false
-                            }
-                            .padding(12.dp)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(vertical = 2.dp)
+                            .heightIn(max = 200.dp)
                     ) {
-                        Text(option)
-                    }
-                }
-                if (text.isNotBlank() && !options.contains(text)) {
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelected(text)
-                                    showSuggestions = false
-                                }
-                                .padding(12.dp)
-                        ) {
-                            Text("Ajouter un joueur: \"$text\"")
+                        items(searchResults) { player ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        text = player.name
+                                        onSelected(player.id)
+                                        showSuggestions = false
+                                    }
+                                    .padding(12.dp)
+                            ) {
+                                Text(player.name)
+                            }
                         }
                     }
                 }
             }
+            is QueryState.Error -> null
         }
+
     }
 }
 
 @Composable
 fun SessionScreen(
     modifier: Modifier = Modifier,
-    viewModel: MatchRecordViewModel,
+    matchRecordViewModel: MatchRecordViewModel,
+    playerViewModel: PlayerViewModel
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val allPlayerNames by viewModel.allPlayerNames.collectAsStateWithLifecycle()
+    val uiState by matchRecordViewModel.sessionForm.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -779,26 +763,24 @@ fun SessionScreen(
         MatchTypeDropdown(
             matchType = matchTypeToLocalized(uiState.matchType),
             onMatchTypeSelected = { selected ->
-                viewModel.updateMatchType(matchTypeFromLocalized(selected, context))
+                matchRecordViewModel.updateMatchType(matchTypeFromLocalized(selected, context))
             },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        AutocompleteTextField(
-            options = allPlayerNames,
-            selected = uiState.opponentName,
-            onSelected = { viewModel.updateOpponentName(it) },
+        PlayerSelectionField(
             label = stringResource(R.string.opponent_name),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            onSelected = { matchRecordViewModel.updateOpponent(it)},
+            playerViewModel = playerViewModel,
         )
         if (uiState.matchType == DOUBLE_MATCH) {
             Spacer(modifier = Modifier.height(8.dp))
-            AutocompleteTextField(
-                options = allPlayerNames,
-                selected = uiState.opponent2Name,
-                onSelected = { viewModel.updateOpponent2Name(it) },
+            PlayerSelectionField(
                 label = stringResource(R.string.opponent_2_name),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                onSelected = { matchRecordViewModel.updateOpponent2(it)},
+                playerViewModel = playerViewModel,
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -807,11 +789,11 @@ fun SessionScreen(
             value = if (uiState.numberOfWins == 0) "" else uiState.numberOfWins.toString(),
             onValueChange = {
                 val value = it.toIntOrNull() ?: 0
-                viewModel.updateNumberOfWins(value)
+                matchRecordViewModel.updateNumberOfWins(value)
             },
             label = { Text(stringResource(R.string.nb_victories)) },
             modifier = Modifier.fillMaxWidth(),
-            isError = !viewModel.isResultValid(uiState.numberOfWins),
+            isError = !matchRecordViewModel.isResultValid(uiState.numberOfWins, uiState.numberOfDefeats),
             supportingText = { Text(stringResource(R.string.hint_nb_victories)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = OutlinedTextFieldDefaults.colors(
@@ -828,11 +810,11 @@ fun SessionScreen(
             value = if (uiState.numberOfDefeats == 0) "" else uiState.numberOfDefeats.toString(),
             onValueChange = {
                 val value = it.toIntOrNull() ?: 0
-                viewModel.updateNumberOfDefeats(value)
+                matchRecordViewModel.updateNumberOfDefeats(value)
             },
             label = { Text(stringResource(R.string.nb_defeats)) },
             modifier = Modifier.fillMaxWidth(),
-            isError = !viewModel.isResultValid(uiState.numberOfDefeats),
+            isError = !matchRecordViewModel.isResultValid(uiState.numberOfWins,uiState.numberOfDefeats),
             supportingText = { Text(stringResource(R.string.hint_nb_victories)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = OutlinedTextFieldDefaults.colors(
@@ -856,17 +838,20 @@ fun SessionScreen(
         Box(modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = {
-                    val result = viewModel.createMatchRecord()
-
-                    coroutineScope.launch {
-                        if (result) {
+                    try {
+                        matchRecordViewModel.createMatchRecord()
+                    } catch (e: Exception) {
+                        coroutineScope.launch {
                             snackbarHostState.showSnackbar(
-                                message = context.getString(R.string.save_success),
+                                message = context.getString(R.string.session_save_error),
                                 duration = SnackbarDuration.Short
                             )
-                        } else {
+                        }
+                        Log.e(TAG,"Unable to create match record")
+                    } finally {
+                        coroutineScope.launch {
                             snackbarHostState.showSnackbar(
-                                message = context.getString(R.string.save_error),
+                                message = context.getString(R.string.save_success),
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -875,7 +860,7 @@ fun SessionScreen(
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
                     .align(Alignment.Center),
-                enabled = viewModel.isFormDataValid(uiState),
+                enabled = matchRecordViewModel.isFormDataValid(uiState),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PingPongDarkRed,
                     contentColor = Color.White,

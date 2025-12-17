@@ -30,6 +30,7 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
     }
     signingConfigs {
         create("release") {
@@ -72,7 +73,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -85,13 +85,11 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
+    implementation(libs.core.ktx)
     annotationProcessor(libs.androidx.room.compiler)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.kotlinx.coroutines.test)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }

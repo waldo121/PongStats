@@ -1,4 +1,4 @@
-package com.waldo121.pongstats.ui.components
+package com.waldo121.pongstats.ui.utils
 
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import java.time.LocalDate

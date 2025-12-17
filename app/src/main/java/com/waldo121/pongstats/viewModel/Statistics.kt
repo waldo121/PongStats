@@ -9,36 +9,51 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.waldo121.pongstats.DOUBLE_MATCH
 import com.waldo121.pongstats.SINGLE_MATCH
 import com.waldo121.pongstats.domain.ChartDataPoint
-import com.waldo121.pongstats.domain.CurrentWinRate
-import com.waldo121.pongstats.domain.DailyWinRateUseCase
+import com.waldo121.pongstats.domain.GlobalStatisticsUseCase
+import com.waldo121.pongstats.domain.MatchesSummary
+import com.waldo121.pongstats.domain.PlayerStatisticsUseCase
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class StatisticsViewModel(
-    private val dailyWinRateUseCase: DailyWinRateUseCase
+    private val globalStatisticsUseCase: GlobalStatisticsUseCase,
+    private val playerStatisticsUseCase: PlayerStatisticsUseCase
 ) : ViewModel() {
 
-    private val _uiStateWinRateSingle = MutableStateFlow<List<ChartDataPoint>>(emptyList())
-    val uiStateWinRateSingle: StateFlow<List<ChartDataPoint>> = _uiStateWinRateSingle
+    private val _winRateSingle = MutableStateFlow<List<ChartDataPoint>>(emptyList())
+    val winRateSingle: StateFlow<List<ChartDataPoint>> = _winRateSingle
     
-    private val _uiStateWinRateDouble = MutableStateFlow<List<ChartDataPoint>>(emptyList())
-    val uiStateWinRateDouble: StateFlow<List<ChartDataPoint>> = _uiStateWinRateDouble
+    private val _winRateDouble = MutableStateFlow<List<ChartDataPoint>>(emptyList())
+    val winRateDouble: StateFlow<List<ChartDataPoint>> = _winRateDouble
 
-    private val _currentWinRateSingle = MutableStateFlow(CurrentWinRate(0, 0, 0f))
-    val currentWinRateSingle: StateFlow<CurrentWinRate> = _currentWinRateSingle
+    private val _matchesSummarySingle = MutableStateFlow(MatchesSummary(0, 0, 0f))
+    val matchesSummarySingle: StateFlow<MatchesSummary> = _matchesSummarySingle
 
-    private val _currentWinRateDouble = MutableStateFlow(CurrentWinRate(0, 0, 0f))
-    val currentWinRateDouble: StateFlow<CurrentWinRate> = _currentWinRateDouble
+    private val _matchesSummaryDouble = MutableStateFlow(MatchesSummary(0, 0, 0f))
+    val matchesSummaryDouble: StateFlow<MatchesSummary> = _matchesSummaryDouble
+
+    private val _matchesSummaryAgainst = MutableStateFlow(MatchesSummary(0,0,0f))
+    val matchesSummaryAgainst = _matchesSummaryAgainst
+
+    private val _matchesSummaryWith = MutableStateFlow(MatchesSummary(0,0,0f))
+    val matchesSummaryWith = _matchesSummaryWith
+
+    private val _winRateAgainst = MutableStateFlow<List<ChartDataPoint>>(emptyList())
+    val winRateAgainst = _winRateAgainst
 
     companion object {
-        val DAILY_WIN_RATE_USE_CASE = object : CreationExtras.Key<DailyWinRateUseCase> {}
+        val GLOBAL_STATS_USE_CASE_KEY = object : CreationExtras.Key<GlobalStatisticsUseCase> {}
+        val PLAYER_STATS_USE_CASE_KEY = object: CreationExtras.Key<PlayerStatisticsUseCase> {}
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val dailyWinRateUseCase = this[DAILY_WIN_RATE_USE_CASE] as DailyWinRateUseCase
+                val globalStatisticsUseCase = this[GLOBAL_STATS_USE_CASE_KEY] as GlobalStatisticsUseCase
+                val playerStatisticsUseCase = this[PLAYER_STATS_USE_CASE_KEY] as PlayerStatisticsUseCase
                 StatisticsViewModel(
-                    dailyWinRateUseCase = dailyWinRateUseCase
+                    globalStatisticsUseCase = globalStatisticsUseCase,
+                    playerStatisticsUseCase = playerStatisticsUseCase
                 )
             }
         }
@@ -47,34 +62,56 @@ class StatisticsViewModel(
     init {
         // Collect singles data
         viewModelScope.launch(Dispatchers.Default) {
-            dailyWinRateUseCase(SINGLE_MATCH)
-                .collect { winRateData ->
-                    _uiStateWinRateSingle.value = winRateData
+            globalStatisticsUseCase.getChartData(SINGLE_MATCH)
+                .collect { winRateData: List<ChartDataPoint> ->
+                    _winRateSingle.value = winRateData
                 }
         }
 
         // Collect doubles data in a separate coroutine
         viewModelScope.launch(Dispatchers.Default) {
-            dailyWinRateUseCase(DOUBLE_MATCH)
-                .collect { winRateData ->
-                    _uiStateWinRateDouble.value = winRateData
+            globalStatisticsUseCase.getChartData(DOUBLE_MATCH)
+                .collect { winRateData: List<ChartDataPoint> ->
+                    _winRateDouble.value = winRateData
                 }
         }
 
         // Collect current singles win rate
         viewModelScope.launch(Dispatchers.Default) {
-            dailyWinRateUseCase.getCurrentWinRate(SINGLE_MATCH)
+            globalStatisticsUseCase.getCurrentWinRate(SINGLE_MATCH)
                 .collect { currentWinRate ->
-                    _currentWinRateSingle.value = currentWinRate
+                    _matchesSummarySingle.value = currentWinRate
                 }
         }
 
         // Collect current doubles win rate
         viewModelScope.launch(Dispatchers.Default) {
-            dailyWinRateUseCase.getCurrentWinRate(DOUBLE_MATCH)
+            globalStatisticsUseCase.getCurrentWinRate(DOUBLE_MATCH)
                 .collect { currentWinRate ->
-                    _currentWinRateDouble.value = currentWinRate
+                    _matchesSummaryDouble.value = currentWinRate
                 }
+        }
+    }
+    fun statsAgainstPlayer(playerId: Int) {
+        viewModelScope.launch {
+            playerStatisticsUseCase.statsAgainst(playerId).collect { value ->
+                _matchesSummaryAgainst.value = value
+            }
+        }
+    }
+    // TODO: Add to ui
+    fun statsWith(playerId: Int) {
+        viewModelScope.launch {
+            playerStatisticsUseCase.statsWith(playerId).collect { value ->
+                _matchesSummaryWith.value = value
+            }
+        }
+    }
+    fun winRateAgainst(playerId: Int) {
+        viewModelScope.launch {
+            playerStatisticsUseCase.winRateAgainst(playerId).collect { value ->
+                _winRateAgainst.value = value
+            }
         }
     }
 }
