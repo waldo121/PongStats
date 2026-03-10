@@ -2,7 +2,7 @@
 
 PongStats is an Android application I have written to collect data about my caual table tennis matches.
 It also allows viewing evolution of performance through graphs. 
-I started this project as an AI Assisted development experiment but then adandonned AI because I didn't like using the tools. 
+I started this project as a AI development experiment but then adandonned AI because I didn't enjoy the result and the process that was closer to vibecoding little pieces at the time than something structured and organized.
 
 
 ## Screenshots
